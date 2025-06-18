@@ -19,6 +19,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel, // Ensure this line is present
+  DropdownMenuSeparator // Ensure this line is present
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -348,6 +350,7 @@ const Stats = () => {
                                     </div>
                                     <div className="flex items-center gap-1 flex-shrink-0">
                                         <Button size="icon" variant="ghost" onClick={(e) => handleRerunWorkout(e, workout as Workout)}><Play className="h-4 w-4 text-green-500" /></Button>
+                                        {/* The DropdownMenu below was removed to revert to the previous state */}
                                         <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); setSelectedWorkout(workout as Workout);}}><BarChart2 className="h-4 w-4 text-blue-500" /></Button>
                                         {editingWorkoutId === workout.id ? (
                                             <>

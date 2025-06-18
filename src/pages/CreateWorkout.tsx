@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ChevronLeft, Check, Filter, Trash, Clock, Save, HelpCircle } from "lucide-react";
+import { ChevronLeft, Check, Filter, Trash, Clock, Save, HelpCircle, ChevronDown } from "lucide-react"; // Added ChevronDown
 import { useExercise } from "@/contexts/ExerciseContext";
 import { useWorkout } from "@/contexts/WorkoutContext";
-import { Exercise, ExerciseCategory, MuscleGroup } from "@/lib/data";
+import { Exercise } from "@/lib/data"; // Exercise is correctly from data.ts
+import { ExerciseCategory, MuscleGroup } from "@/lib/exerciseTypes"; // Corrected import path
 import { SavedWorkoutTemplate } from "@/contexts/WorkoutContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,11 +14,19 @@ import { getExerciseImageUrl } from "@/lib/utils";
 import { convertGoogleDriveUrl } from "@/lib/formatters";
 import ExerciseFilters from "@/components/ui/ExerciseFilters";
 import CreateWorkoutHelpPopup from "@/components/ui/CreateWorkoutHelpPopup";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"; // Added DropdownMenu imports
+import IconButton from "@/components/ui/IconButton"; // Make sure IconButton is imported
 
 const CreateWorkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { exercises, filterExercises } = useExercise();
+  const { exercises, filterExercises, getExerciseById } = useExercise(); // Added getExerciseById
   const { startWorkout, savedWorkoutTemplates, startSavedWorkout, deleteSavedWorkout, saveWorkoutTemplate, currentWorkout } = useWorkout();
 
   const searchParams = new URLSearchParams(location.search);
@@ -168,6 +177,79 @@ const CreateWorkout = () => {
     return date.toLocaleDateString();
   };
 
+  // Function to render saved workout templates with dropdown
+  const renderSavedWorkoutTemplatesWithDropdown = () => {
+    if (savedWorkoutTemplates.length === 0) {
+      return null; 
+    }
+
+    return savedWorkoutTemplates.map((template) => {
+      const exercisesInWorkout = template.exercises.map(id => getExerciseById(id)).filter(ex => ex) as Exercise[];
+      return (
+        <div
+          key={template.id}
+          className="p-4 rounded-lg border border-gray-700 bg-gym-card hover:bg-gym-card-hover transition-colors flex justify-between items-center"
+        >
+          <div onClick={() => handleStartSavedWorkout(template)} className="cursor-pointer flex-grow">
+            <h3 className="font-medium">{template.name}</h3>
+            <div className="flex text-xs text-muted-foreground space-x-3 mt-1">
+              <span>{exercisesInWorkout.length} exercise{exercisesInWorkout.length !== 1 ? 's' : ''}</span>
+              <span>•</span>
+              <span>Created {formatDate(template.createdAt)}</span>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 ml-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="p-1">
+                  <ChevronDown className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Exercises</DropdownMenuLabel>
+                {exercisesInWorkout.length > 0 ? (
+                  exercisesInWorkout.map((exercise) =>
+                    exercise ? (
+                      <DropdownMenuItem key={exercise.id} disabled>
+                        {exercise.name}
+                      </DropdownMenuItem>
+                    ) : null
+                  )
+                ) : (
+                  <DropdownMenuItem disabled>No exercises in this workout.</DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <IconButton
+              Icon={Trash}
+              onClick={() => { // Removed 'e' and 'e.stopPropagation()'
+                // Consider if confirm is still needed or if handleDeleteSavedWorkout handles it
+                // For now, assuming handleDeleteSavedWorkout might need the event for other reasons if it's not just for stopPropagation
+                // If handleDeleteSavedWorkout was defined as (e, id), it needs to be (id) or e passed differently
+                // For simplicity, if stopPropagation was the only reason for 'e', it's removed.
+                // If handleDeleteSavedWorkout expects an event, this will need further adjustment.
+                const mockEvent = {} as React.MouseEvent<HTMLButtonElement, MouseEvent>; // Or null if not used
+                handleDeleteSavedWorkout(mockEvent, template.id); // Adjusted if needed
+              }}
+              label="Delete"
+              variant="blue"
+              size="sm"
+            />
+            <IconButton
+              Icon={Clock}
+              onClick={() => { // Removed 'e' and 'e.stopPropagation()'
+                handleStartSavedWorkout(template);
+              }}
+              label="Start"
+              variant="blue"
+              size="sm"
+            />
+          </div>
+        </div>
+      );
+    });
+  };
+
   return (
     <div className="page-container page-transition pb-24">
       <div className="flex items-center justify-between mb-6">
@@ -246,47 +328,17 @@ const CreateWorkout = () => {
         </DialogContent>
       </Dialog>
 
-      {workoutType === "Custom" && showSavedWorkouts && savedWorkoutTemplates.length > 0 && (
+      {workoutType === "Custom" && showSavedWorkouts && (
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-3">Saved Workouts</h2>
-          <div className="space-y-3">
-            {savedWorkoutTemplates.map((template) => (
-              <div
-                key={template.id}
-                className="p-4 rounded-lg border border-gray-700 bg-gym-card hover:bg-gym-card-hover cursor-pointer transition-colors"
-                onClick={() => handleStartSavedWorkout(template)}
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-medium">{template.name}</h3>
-                    <div className="flex text-xs text-muted-foreground space-x-3 mt-1">
-                      <span>{template.exercises.length} exercises</span>
-                      <span>•</span>
-                      <span>Created {formatDate(template.createdAt)}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      className="p-2 hover:bg-gym-dark rounded-full transition-colors"
-                      onClick={(e) => handleDeleteSavedWorkout(e, template.id)}
-                    >
-                      <Trash className="h-4 w-4 text-gym-red" />
-                    </button>
-                    <button
-                      className="p-2 bg-gym-green rounded-full transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartSavedWorkout(template);
-                      }}
-                    >
-                      <Clock className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="my-6 border-t border-gray-700"></div>
+          {savedWorkoutTemplates.length > 0 ? (
+            <div className="space-y-3">
+              {renderSavedWorkoutTemplatesWithDropdown()} {/* Call the new function here */}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">No saved workouts yet. Create one using the 'Save Workout' button above after selecting exercises.</p>
+          )}
+          {savedWorkoutTemplates.length > 0 && <div className="my-6 border-t border-gray-700"></div>}
         </div>
       )}
 

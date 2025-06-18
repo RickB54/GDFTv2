@@ -153,7 +153,10 @@ const Exercises = () => {
                   Reorder
                 </Button>
               )}
-            <div className="text-sm text-gray-400">
+            <div 
+              className="text-sm text-gray-400 cursor-pointer hover:text-primary transition-colors"
+              onClick={() => handleCategoryClick("All")}
+            >
               Total Exercises: {totalExercises}
             </div>
           </div>

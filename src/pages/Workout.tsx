@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Clock, MoreVertical, Trash, Edit, RefreshCw, Save, Plus, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, MoreVertical, Trash, Edit, RefreshCw, Save, Plus, Search, ChevronDown } from "lucide-react"; // Added ChevronDown
 import { useExercise } from "@/contexts/ExerciseContext";
 import { useWorkout } from "@/contexts/WorkoutContext";
-import { Exercise, WorkoutSet, ExerciseCategory } from "@/lib/data";
+import { Exercise, WorkoutSet } from "@/lib/data";
+import { ExerciseCategory } from "@/lib/exerciseTypes";
 import { SavedWorkoutTemplate } from "@/contexts/WorkoutContext";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -13,6 +14,13 @@ import { Textarea } from "@/components/ui/textarea";
 import IconButton from "@/components/ui/IconButton";
 import { formatNumber } from "@/lib/formatters";
 import EditSetModal from "@/components/ui/EditSetModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"; // Added DropdownMenu imports
 
 const Workout = () => {
   const navigate = useNavigate();
@@ -381,6 +389,83 @@ const Workout = () => {
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString();
+  };
+
+  // Function to render saved workout templates
+  const renderSavedWorkoutTemplates = () => {
+    const filteredTemplates = getFilteredWorkouts();
+
+    if (filteredTemplates.length === 0 && (searchQuery || selectedCategory !== "All")) {
+      return <p className="text-muted-foreground text-center py-4">No saved workouts match your filters.</p>;
+    }
+
+    if (filteredTemplates.length === 0) {
+      return <p className="text-muted-foreground text-center py-4">No saved workouts yet. Create one from an active workout!</p>;
+    }
+
+    return filteredTemplates.map((template) => {
+      const exercisesInWorkout = template.exercises.map(id => getExerciseById(id)).filter(ex => ex);
+      return (
+        <div 
+          key={template.id} 
+          className="p-4 rounded-lg border border-gray-700 bg-gym-card hover:bg-gym-card-hover transition-colors flex justify-between items-center"
+        >
+          <div onClick={() => handleStartSavedWorkout(template.id)} className="cursor-pointer flex-grow">
+            <h3 className="font-medium">{template.name}</h3>
+            <div className="flex text-xs text-muted-foreground space-x-3 mt-1">
+              <span>{template.type}</span>
+              <span>•</span>
+              <span>{formatDate(template.createdAt)}</span>
+              <span>•</span>
+              <span>{exercisesInWorkout.length} exercise{exercisesInWorkout.length !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 ml-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="p-1">
+                  <ChevronDown className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Exercises</DropdownMenuLabel>
+                {exercisesInWorkout.length > 0 ? (
+                  exercisesInWorkout.map((exercise) =>
+                    exercise ? (
+                      <DropdownMenuItem key={exercise.id} disabled>
+                        {exercise.name}
+                      </DropdownMenuItem>
+                    ) : null
+                  )
+                ) : (
+                  <DropdownMenuItem disabled>No exercises in this workout.</DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <IconButton
+              Icon={Trash}
+              onClick={() => {
+                if (window.confirm("Are you sure you want to delete this saved workout?")) {
+                  deleteSavedWorkout(template.id);
+                }
+              }}
+              label="Delete" // Changed from tooltip to label
+              variant="blue"   // Use variant for styling
+              // className="text-blue-500 hover:bg-blue-500/20" // Removed direct className styling for consistency
+            />
+            <IconButton
+              Icon={Clock} 
+              onClick={() => {
+                handleStartSavedWorkout(template.id);
+              }}
+              label="Start"  // Changed from tooltip to label
+              variant="blue" // Use variant for styling
+              // className="text-blue-500 hover:bg-blue-500/20" // Removed direct className styling for consistency
+            />
+          </div>
+        </div>
+      );
+    });
   };
   
   const renderSet = (set: WorkoutSet, index: number) => {
@@ -1075,48 +1160,7 @@ const Workout = () => {
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-3">Saved Workouts</h2>
           <div className="space-y-3">
-            {getFilteredWorkouts().map((template) => (
-              <div
-                key={template.id}
-                className="p-4 rounded-lg border border-gray-700 bg-gym-card hover:bg-gym-card-hover cursor-pointer transition-colors"
-                onClick={() => handleStartSavedWorkout(template.id)}
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-medium">{template.name}</h3>
-                    <div className="flex text-xs text-muted-foreground space-x-3 mt-1">
-                      <span>{template.exercises.length} exercises</span>
-                      <span>•</span>
-                      <span>Created {formatDate(template.createdAt)}</span>
-                      <span>•</span>
-                      <span>Valid: {template.exercises.filter(id => id && id.trim() !== '').length}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      className="p-2 hover:bg-gym-dark rounded-full transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (window.confirm("Are you sure you want to delete this saved workout?")) {
-                          deleteSavedWorkout(template.id);
-                        }
-                      }}
-                    >
-                      <Trash className="h-4 w-4 text-gym-red" />
-                    </button>
-                    <button
-                      className="p-2 bg-gym-green rounded-full transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartSavedWorkout(template.id);
-                      }}
-                    >
-                      <Clock className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+            {renderSavedWorkoutTemplates()} {/* Changed this line to call the new render function */}
           </div>
         </div>
       )}

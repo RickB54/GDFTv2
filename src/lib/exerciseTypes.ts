@@ -61,10 +61,14 @@ export type MuscleGroup =
   | 'Biceps'
   | 'Calves'
   | 'Chest'
+  | 'Core' // Added Core
+  | 'Cardiovascular' // Added Cardiovascular
   | 'Forearms'
+  | 'Full Body' // Added Full Body
   | 'Glutes'
   | 'Hamstrings'
   | 'Lats'
+  | 'Legs' // Added Legs
   | 'Lower Chest'
   | 'Inner Thigh'
   | 'Inner Thighs'
