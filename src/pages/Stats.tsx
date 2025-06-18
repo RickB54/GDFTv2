@@ -299,6 +299,7 @@ const Stats = () => {
                                                 <th className="p-2 text-right">Weight</th>
                                                 <th className="p-2 text-right">Time</th>
                                                 <th className="p-2 text-right">Dist</th>
+                                                <th className="p-2 text-right">Incline</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -312,6 +313,15 @@ const Stats = () => {
                                                 const totalTime = setsForExercise.reduce((sum, set) => sum + (set.time || 0), 0);
                                                 const totalDistance = setsForExercise.reduce((sum, set) => sum + (set.distance || 0), 0);
                                                 
+                                                let avgInclineDisplay = '-';
+                                                if (exercise.category === 'Slide Board') {
+                                                    const inclines = setsForExercise.map(s => s.incline).filter(inc => typeof inc === 'number');
+                                                    if (inclines.length > 0) {
+                                                        const avgIncline = inclines.reduce((sum, inc) => sum + inc!, 0) / inclines.length;
+                                                        avgInclineDisplay = `${Math.round(avgIncline)}`; // Display as rounded whole number
+                                                    }
+                                                }
+
                                                 return (
                                                     <tr key={index} className="border-t border-gray-700">
                                                         <td className="p-2 font-medium">{exercise.name}</td>
@@ -320,6 +330,7 @@ const Stats = () => {
                                                         <td className="p-2 text-right">{!isNaN(avgWeight) && avgWeight > 0 ? `${avgWeight.toFixed(1)} lbs` : '-'}</td>
                                                         <td className="p-2 text-right">{totalTime ? formatDuration(totalTime) : '-'}</td>
                                                         <td className="p-2 text-right">{totalDistance ? `${totalDistance.toFixed(2)} mi` : '-'}</td>
+                                                        <td className="p-2 text-right">{avgInclineDisplay}</td>
                                                     </tr>
                                                 )
                                             })}
