@@ -15,6 +15,12 @@ import WorkoutStatsGraphPopup from '@/components/ui/WorkoutStatsGraphPopup';
 import type { Workout } from '@/lib/data';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -37,7 +43,8 @@ const Stats = () => {
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
     const [workoutToDelete, setWorkoutToDelete] = useState<string | null>(null);
-    
+    const [filterType, setFilterType] = useState<'day' | 'week' | 'month' | 'all'>('all');
+
     const [openWorkouts, setOpenWorkouts] = useState(() => {
         const sorted = [...(workouts as WorkoutWithNotes[])].sort((a, b) => b.startTime - a.startTime);
         if (sorted.length > 0) {
@@ -49,22 +56,35 @@ const Stats = () => {
     const stats = getWorkoutStats();
 
     const filteredAndSortedWorkouts = useMemo(() => {
-        const sorted = [...(workouts as WorkoutWithNotes[])].sort((a, b) => b.startTime - a.startTime);
-        if (!dateRange || !dateRange.from) {
-            return sorted;
-        }
-        
-        const from = dateRange.from;
-        const to = dateRange.to ? new Date(dateRange.to) : new Date(from);
-        
-        // Adjust 'to' date to be end of day for inclusive range
-        to.setHours(23, 59, 59, 999);
+        let sorted = [...(workouts as WorkoutWithNotes[])].sort((a, b) => b.startTime - a.startTime);
 
-        return sorted.filter(workout => {
-            const workoutDate = new Date(workout.startTime);
-            return workoutDate >= from && workoutDate <= to;
-        });
-    }, [workouts, dateRange]);
+        if (filterType !== 'all') {
+            const now = new Date();
+            let fromDate = new Date();
+            if (filterType === 'day') {
+                fromDate.setHours(0, 0, 0, 0);
+            } else if (filterType === 'week') {
+                const dayOfWeek = now.getDay(); // Sunday - 0, Monday - 1, ..., Saturday - 6
+                fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
+                fromDate.setHours(0, 0, 0, 0);
+            } else if (filterType === 'month') {
+                fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                fromDate.setHours(0, 0, 0, 0);
+            }
+            sorted = sorted.filter(workout => new Date(workout.startTime) >= fromDate);
+        }
+
+        if (dateRange && dateRange.from) { // Ensure dateRange and from are defined
+            const from = dateRange.from;
+            const to = dateRange.to ? new Date(dateRange.to) : new Date(from);
+            to.setHours(23, 59, 59, 999);
+            return sorted.filter(workout => {
+                const workoutDate = new Date(workout.startTime);
+                return workoutDate >= from && workoutDate <= to;
+            });
+        }
+        return sorted; // Return sorted if no dateRange is applied
+    }, [workouts, dateRange, filterType]);
 
     const getWorkoutType = (workout: Workout) => {
         if (!workout.exercises || workout.exercises.length === 0) return 'General';
@@ -160,6 +180,55 @@ const Stats = () => {
         }
     };
 
+    const handleFilterChange = (type: 'day' | 'week' | 'month' | 'all') => {
+        setFilterType(type);
+        setDateRange(undefined);
+        let newOpenStates = { ...openWorkouts };
+        const threshold = new Date();
+        let collapseMessage = "";
+
+        if (type === 'day') {
+            // For 'day', we don't usually auto-collapse further unless specified
+            toast.info("Displaying workouts for today.");
+            // Optionally, ensure all are expanded for 'day' or keep current states
+            // return; // if no collapsing logic for day
+        } else if (type === 'week') {
+            threshold.setDate(threshold.getDate() - 7);
+            collapseMessage = "Older workouts (beyond this week) have been collapsed.";
+        } else if (type === 'month') {
+            threshold.setMonth(threshold.getMonth() - 1);
+            collapseMessage = "Older workouts (beyond this month) have been collapsed.";
+        } else { // 'all'
+            setOpenWorkouts(prev => {
+                const allOpen = {};
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                Object.keys(prev).forEach(id => allOpen[id] = true);
+                return allOpen;
+            });
+            toast.info("Displaying all workouts.");
+            return; 
+        }
+
+        let changed = false;
+        // Apply collapsing logic only if not 'all' and not 'day' (or if 'day' has specific collapse rules)
+        if (type === 'week' || type === 'month') {
+            filteredAndSortedWorkouts.forEach(workout => {
+                if (new Date(workout.startTime).getTime() < threshold.getTime()) {
+                    if(newOpenStates[workout.id] !== false) {
+                        newOpenStates[workout.id] = false;
+                        changed = true;
+                    }
+                }
+            });
+            setOpenWorkouts(newOpenStates);
+            if (changed) {
+                toast.info(collapseMessage);
+            } else {
+                toast.info(`Displaying workouts for the selected ${type}. No older workouts to collapse.`);
+            }
+        }
+    };
+
     const handleToggleAll = (expand: boolean) => {
         const newOpenStates: Record<string, boolean> = {};
         filteredAndSortedWorkouts.forEach(workout => {
@@ -227,10 +296,27 @@ const Stats = () => {
                 <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
                     <h2 className="text-xl font-semibold">Workout History</h2>
                     <div className="flex items-center gap-2 flex-wrap">
-                        <Button variant="outline" size="sm" onClick={handleCleanUp} className="flex items-center gap-1"><ArchiveRestore className="h-4 w-4" /> Clean Up</Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                                    <ArchiveRestore className="h-4 w-4" /> Filter ({filterType.charAt(0).toUpperCase() + filterType.slice(1)})
+                                    <ChevronDown className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleFilterChange('day')}>Day</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleFilterChange('week')}>Week</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleFilterChange('month')}>Month</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleFilterChange('all')}>All</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button variant="outline" size="sm" onClick={() => handleToggleAll(true)} className="flex items-center gap-1"><ChevronsRight className="h-4 w-4" /> Expand All</Button>
                         <Button variant="outline" size="sm" onClick={() => handleToggleAll(false)} className="flex items-center gap-1"><ChevronsLeft className="h-4 w-4" /> Collapse All</Button>
-                        <DateRangePicker value={dateRange} onDateChange={setDateRange} />
+                        <DateRangePicker 
+                            value={dateRange} 
+                            onDateChange={setDateRange} 
+                            calendarClassName="p-3 scale-110 origin-top-right"
+                        />
                     </div>
                 </div>
                 <div className="space-y-4">

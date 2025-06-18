@@ -18,6 +18,7 @@ interface DateRangePickerProps {
   onDateChange: (date: DateRange | undefined) => void
   align?: "start" | "center" | "end"
   className?: string
+  calendarClassName?: string // Add this new prop
 }
 
 export function DateRangePicker({
@@ -25,6 +26,7 @@ export function DateRangePicker({
   onDateChange,
   className,
   align = "start",
+  calendarClassName, // Destructure the new prop
   ...props
 }: DateRangePickerProps & Omit<React.HTMLAttributes<HTMLDivElement>, "onDateChange">) {
   const [isOpen, setIsOpen] = React.useState(false)
@@ -65,6 +67,7 @@ export function DateRangePicker({
             selected={value}
             onSelect={onDateChange}
             numberOfMonths={isMobile ? 1 : 2}
+            className={calendarClassName} // Apply the className here
           />
           <div className="flex justify-end gap-2 p-3 border-t border-border">
             <Button

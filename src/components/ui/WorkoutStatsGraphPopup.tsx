@@ -21,6 +21,7 @@ const chartConfig = {
   weight: { label: "Avg. Weight (lbs)", color: "hsl(var(--chart-3))" },
   time: { label: "Time (s)", color: "hsl(var(--chart-4))" },
   distance: { label: "Distance (mi)", color: "hsl(var(--chart-5))" },
+  incline: { label: "Incline", color: "hsl(var(--chart-6))" }, // Assuming a chart-6 variable exists for color
 };
 
 const WorkoutStatsGraphPopup = ({ isOpen, onClose, workout, getExerciseById }: WorkoutStatsGraphPopupProps) => {
@@ -44,7 +45,15 @@ const WorkoutStatsGraphPopup = ({ isOpen, onClose, workout, getExerciseById }: W
             const totalTime = setsForExercise.reduce((sum, set) => sum + (set.time || 0), 0);
             const totalDistance = setsForExercise.reduce((sum, set) => sum + (set.distance || 0), 0);
             
-            const exerciseData = {
+            let avgIncline = 0;
+            if (exercise.category === 'Slide Board') {
+                const setsWithIncline = setsForExercise.filter(s => typeof s.incline === 'number');
+                if (setsWithIncline.length > 0) {
+                    avgIncline = setsWithIncline.reduce((sum, set) => sum + (set.incline || 0), 0) / setsWithIncline.length;
+                }
+            }
+
+            const exerciseData: any = {
                 name: exercise.name,
                 sets: setsForExercise.length,
                 reps: totalReps,
@@ -53,7 +62,11 @@ const WorkoutStatsGraphPopup = ({ isOpen, onClose, workout, getExerciseById }: W
                 distance: parseFloat(totalDistance.toFixed(2)),
             };
 
-            const hasWeightMetrics = exerciseData.reps > 0 || exerciseData.weight > 0;
+            if (exercise.category === 'Slide Board' && avgIncline > 0) {
+                exerciseData.incline = Math.round(avgIncline);
+            }
+
+            const hasWeightMetrics = exerciseData.reps > 0 || exerciseData.weight > 0 || exerciseData.incline > 0;
             const hasCardioMetrics = exerciseData.time > 0 || exerciseData.distance > 0;
 
             if (hasWeightMetrics) {
@@ -97,6 +110,10 @@ const WorkoutStatsGraphPopup = ({ isOpen, onClose, workout, getExerciseById }: W
                                     <Bar dataKey="reps" fill={chartConfig.reps.color} radius={4} yAxisId="left" />
                                     <Bar dataKey="weight" fill={chartConfig.weight.color} radius={4} yAxisId="right" />
                                     <Bar dataKey="sets" fill={chartConfig.sets.color} radius={4} yAxisId="left" />
+                                    {/* Add Incline bar only if there's incline data in the set for this chart type */}
+                                    {weightChartData.some(d => d.incline > 0) && (
+                                        <Bar dataKey="incline" fill={chartConfig.incline.color} radius={4} yAxisId="left" />
+                                    )}
                                 </BarChart>
                             </ChartContainer>
                         </div>
