@@ -120,6 +120,7 @@ const Stats = () => {
 
     const handleEdit = (e: React.MouseEvent, workoutId: string, notes: string | undefined) => {
         e.stopPropagation();
+        setOpenWorkouts(prev => ({ ...prev, [workoutId]: true })); // Add this line to open the collapsible
         setEditingWorkoutId(workoutId);
         setEditedNotes(notes || '');
     };

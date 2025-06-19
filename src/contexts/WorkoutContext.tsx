@@ -105,6 +105,7 @@ interface WorkoutContextType {
   skipSet: (setId: string) => void;
   updateSet: (setId: string, updates: Partial<WorkoutSet>) => void;
   updateWorkout: (updatedWorkout: any) => void;
+  updateCurrentWorkoutNotes: (notes: string) => void; // Added this line
   getWorkoutStats: () => {
     totalWorkouts: number;
     totalTime: number;
@@ -156,6 +157,19 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
     const saved = localStorage.getItem('customPlans');
     return saved ? JSON.parse(saved) : [];
   });
+
+  // Function to update notes for the current workout
+  const updateCurrentWorkoutNotes = (notes: string) => {
+    if (currentWorkout) {
+      setCurrentWorkout(prevWorkout => {
+        if (!prevWorkout) return null;
+        const updatedWorkout = { ...prevWorkout, notes };
+        // Also update localStorage for persistence during the workout
+        localStorage.setItem('currentWorkout', JSON.stringify(updatedWorkout));
+        return updatedWorkout;
+      });
+    }
+  };
 
   useEffect(() => {
     const loadedWorkouts = getWorkouts();
@@ -232,7 +246,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
   const endWorkout = () => {
     if (currentWorkout) {
       const endedWorkout = {
-        ...currentWorkout,
+        ...currentWorkout, // Notes will be part of currentWorkout
         endTime: Date.now(),
         totalTime: Math.floor((Date.now() - currentWorkout.startTime) / 1000),
       };
@@ -423,21 +437,19 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const saveWorkoutTemplate = (name: string, exerciseIds: string[], type: ExerciseCategory | "Custom") => {
-    const template: SavedWorkoutTemplate = {
+    const newTemplate: SavedWorkoutTemplate = {
       id: generateId(),
-      name: name.trim(),
+      name,
       exercises: exerciseIds,
-      type: type,
-      createdAt: Date.now()
+      type,
+      createdAt: Date.now(),
     };
-
-    console.log("Saving workout template:", template);
-
     setSavedWorkoutTemplates(prev => {
-      const updated = [template, ...prev];
+      const updated = [newTemplate, ...prev];
       saveSavedWorkoutTemplates(updated);
       return updated;
     });
+    toast.success(`Template "${name}" saved!`);
   };
 
   const deleteSavedWorkout = (templateId: string) => {
@@ -585,13 +597,14 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
         skipSet,
         updateSet,
         updateWorkout,
-        getWorkoutStats,
+        updateCurrentWorkoutNotes, // This was correctly added
+        getWorkoutStats, // This was already here
         navigateToExercise,
         currentExerciseIndex,
         navigateToNextExercise,
         navigateToPreviousExercise,
         saveCustomWorkout,
-        saveWorkoutTemplate,
+        saveWorkoutTemplate, // Add saveWorkoutTemplate here
         deleteSavedWorkout,
         deleteWorkout,
         addBodyMeasurement,

@@ -38,20 +38,20 @@ const WorkoutTypeCard = ({
     <div
       onClick={onClick}
       className={cn(
-        "p-3 rounded-xl border backdrop-blur-sm transition-all duration-300 flex flex-col items-center justify-center cursor-pointer hover:scale-[1.02]",
+        "p-2 rounded-lg border backdrop-blur-sm transition-all duration-300 flex flex-col items-center justify-center cursor-pointer hover:scale-[1.02]", // Reduced padding from p-3 to p-2, rounded-xl to rounded-lg
         colorVariants[color],
         className
       )}
     >
       <div
         className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center mb-1",
+          "w-8 h-8 rounded-full flex items-center justify-center mb-1", // Reduced icon container from w-10 h-10 to w-8 h-8
           iconColorVariants[color]
         )}
       >
-        <Icon className="h-5 w-5 text-white" />
+        <Icon className="h-4 w-4 text-white" /> {/* Reduced icon size from h-5 w-5 to h-4 w-4 */}
       </div>
-      <span className="font-medium text-sm">{title}</span>
+      <span className="font-medium text-xs">{title}</span> {/* Reduced font size from text-sm to text-xs */}
     </div>
   );
 };

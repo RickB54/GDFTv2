@@ -36,7 +36,8 @@ const Workout = () => {
     saveCustomWorkout,
     savedWorkoutTemplates,
     startSavedWorkout,
-    deleteSavedWorkout
+    deleteSavedWorkout,
+    updateCurrentWorkoutNotes // Added this line
   } = useWorkout();
   
   const searchParams = new URLSearchParams(location.search);
@@ -73,11 +74,13 @@ const Workout = () => {
     if (currentWorkout) {
       console.log("Setting show active workout to true because currentWorkout exists");
       setShowActiveWorkout(true);
-      setWorkoutTime(0); // Reset timer for new workout
+      setWorkoutTime(currentWorkout.totalTime || 0); // Resume timer if workout was loaded
+      setNotes(currentWorkout.notes || ""); // Initialize notes from currentWorkout
     } else {
       console.log("No current workout, keeping showActiveWorkout as is");
+      setNotes(""); // Clear notes if no active workout
     }
-  }, [currentWorkout?.id]);
+  }, [currentWorkout?.id, currentWorkout?.notes]); // Added currentWorkout.notes dependency
 
   useEffect(() => {
     if (exerciseId && !currentWorkout) {
@@ -145,6 +148,13 @@ const Workout = () => {
       setCurrentExercise(getExerciseById(exerciseId) || null);
     }
   }, [currentExerciseIndex, currentWorkout, getExerciseById]);
+
+  // Update notes in context when local notes change
+  useEffect(() => {
+    if (currentWorkout && updateCurrentWorkoutNotes) {
+      updateCurrentWorkoutNotes(notes);
+    }
+  }, [notes, currentWorkout, updateCurrentWorkoutNotes]);
   
   const formatTime = (timeInSeconds: number) => {
     const minutes = Math.floor(timeInSeconds / 60);
@@ -855,11 +865,11 @@ const Workout = () => {
         
         {showNotesForm && (
           <div className="mb-6">
-            <textarea
-              className="w-full h-24 bg-gym-dark border border-gray-700 rounded-lg p-3 text-sm"
-              placeholder="Add notes about this exercise..."
+            <Textarea
+              placeholder="Add notes for this workout..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              className="mt-2 w-full h-24 bg-gym-dark border border-gray-700 rounded-lg p-3 text-sm"
             />
           </div>
         )}

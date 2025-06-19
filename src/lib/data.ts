@@ -107,6 +107,7 @@ export interface Workout {
   endTime?: number;
   totalTime?: number;
   type: RelaxedExerciseCategory | "Custom"; // Changed from ExerciseCategory
+  notes?: string; // Added notes property here
 }
 
 export interface SavedWorkoutTemplate {

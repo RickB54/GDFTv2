@@ -94,6 +94,8 @@ const MyCalendar = () => {
   const [editingWorkout, setEditingWorkout] = useState<ScheduledWorkout | null>(null);
   const [showEditComingSoon, setShowEditComingSoon] = useState(false);
   const [selectedExercises, setSelectedExercises] = useState<string[]>([]);
+  const [exerciseSelectionCompleted, setExerciseSelectionCompleted] = useState(false); // New state
+  const [isScheduleHelpOpen, setIsScheduleHelpOpen] = useState(false); // New state for the new help popup
 
   const { workouts, savedWorkoutTemplates, customPlans, startWorkout, startSavedWorkout } = useWorkout();
   const navigate = useNavigate();
@@ -296,6 +298,10 @@ const MyCalendar = () => {
   const openScheduleDialog = (date: Date) => {
     setSchedulingDate(date);
     setIsDialogOpen(true);
+    setExerciseSelectionCompleted(false); // Reset on new dialog open
+    setWorkoutType("Weights"); // Default or reset
+    setSelectedExercises([]);
+    setPendingWorkout(null);
   };
 
   const handlePerformWorkout = (workout: ScheduledWorkout) => {
@@ -603,103 +609,118 @@ const MyCalendar = () => {
 
   // Function to schedule a workout
   const handleScheduleDialogSubmit = () => {
-    if (!schedulingDate) return;
+    if (!schedulingDate || !pendingWorkout) return;
 
-    const typesWithPredefinedExercises = ["Custom", "Plan", "Existing"];
-    if (typesWithPredefinedExercises.includes(workoutType)) {
-        const workoutData: Omit<ScheduledWorkout, 'id'> = {
-            date: schedulingDate,
-            workoutType,
-            time: workoutTime,
-            templateId: workoutType === "Custom" ? selectedTemplateId : undefined,
-            planId: workoutType === "Plan" ? selectedPlanId : undefined,
-            existingWorkoutId: workoutType === "Existing" ? selectedExistingWorkoutId : undefined,
-        };
+    // This function is now called AFTER exercises are selected (if applicable)
+    // or directly if the workout type doesn't need exercise selection (Custom, Plan, Existing)
 
-        if (workoutType === "Existing" && selectedExistingWorkoutId) {
-            const selected = workouts.find(w => w.id === selectedExistingWorkoutId);
-            if (selected) {
-                (workoutData as ScheduledWorkout).workoutType = `Existing: ${selected.name}`;
-            }
-        }
-        
-        if (editingWorkout) {
-            const updatedWorkout: ScheduledWorkout = { ...editingWorkout, ...workoutData, date: schedulingDate, time: workoutTime };
-            if (workoutType === "Existing" && selectedExistingWorkoutId) {
-                const selected = workouts.find(w => w.id === selectedExistingWorkoutId);
-                if (selected) updatedWorkout.workoutType = `Existing: ${selected.name}`;
-            } else {
-                updatedWorkout.workoutType = workoutType;
-            }
-
-            setScheduledWorkouts(prev => prev.map(w => w.id === editingWorkout.id ? updatedWorkout : w));
-            toast.success(`Workout updated for ${format(schedulingDate, 'MMMM do')}`);
-        } else {
-            const newWorkout: ScheduledWorkout = { ...workoutData, id: Math.random().toString(36).substring(2, 15), date: schedulingDate };
-            setScheduledWorkouts(prev => [...prev, newWorkout]);
-            toast.success(`Workout scheduled for ${format(schedulingDate, 'MMMM do')}`);
-        }
-
-        setIsDialogOpen(false);
-        return;
-    }
-    
-    const workoutToSchedule: PendingWorkout = {
-      id: editingWorkout ? editingWorkout.id : undefined,
+    const workoutData: Omit<ScheduledWorkout, 'id'> = {
       date: schedulingDate,
-      workoutType,
+      workoutType: pendingWorkout.workoutType,
       time: workoutTime,
-      exercises: editingWorkout ? editingWorkout.exercises : []
+      templateId: pendingWorkout.workoutType === "Custom" ? selectedTemplateId : undefined,
+      planId: pendingWorkout.workoutType === "Plan" ? selectedPlanId : undefined,
+      existingWorkoutId: pendingWorkout.workoutType === "Existing" ? selectedExistingWorkoutId : undefined,
+      exercises: pendingWorkout.exercises,
     };
-    
-    setPendingWorkout(workoutToSchedule);
-    setSelectedExercises(editingWorkout?.exercises || []); 
-    setSearchQuery("");
-    
-    if (workoutType === "No Equipment") {
-      setEquipmentFilter("None");
-      setCategoryFilter("No Equipment");
-    } else if (workoutType === "Slide Board") {
-      setEquipmentFilter("Slide Board");
-      setCategoryFilter("Slide Board");
-    } else if (workoutType === "Weights") {
-      setEquipmentFilter("All");
-      setCategoryFilter("Weights");
-    } else if (workoutType === "Cardio") {
-      setEquipmentFilter("All");
-      setCategoryFilter("Cardio");
-    } else {
-      setEquipmentFilter("All");
-      setCategoryFilter("All");
+
+    if (pendingWorkout.workoutType === "Existing" && selectedExistingWorkoutId) {
+      const selected = workouts.find(w => w.id === selectedExistingWorkoutId);
+      if (selected) {
+        (workoutData as ScheduledWorkout).workoutType = `Existing: ${selected.name}`;
+      }
     }
 
-    setMuscleGroupFilter("All");
+    if (editingWorkout && pendingWorkout.id === editingWorkout.id) {
+      const updatedWorkout: ScheduledWorkout = { 
+        ...editingWorkout, 
+        ...workoutData, 
+        date: schedulingDate, 
+        time: workoutTime, 
+        workoutType: workoutData.workoutType, // Ensure this is updated
+        exercises: selectedExercises // Ensure exercises from selector are used for edits too
+      };
+      setScheduledWorkouts(prev => prev.map(w => w.id === editingWorkout.id ? updatedWorkout : w));
+      toast.success(`Workout updated for ${format(schedulingDate, 'MMMM do')}`);
+    } else {
+      const newWorkout: ScheduledWorkout = { 
+        ...(workoutData as Omit<ScheduledWorkout, 'id' | 'exercises'>), // Cast to avoid type issues if exercises is already there
+        id: Math.random().toString(36).substring(2, 15), 
+        date: schedulingDate, 
+        exercises: selectedExercises 
+      };
+      setScheduledWorkouts(prev => [...prev, newWorkout]);
+      toast.success(`Workout scheduled for ${format(newWorkout.date, 'MMMM do')}`);
+    }
+
     setIsDialogOpen(false);
-    setIsExerciseSelectorOpen(true);
+    setEditingWorkout(null);
+    setPendingWorkout(null);
+    setExerciseSelectionCompleted(false);
+  };
+
+  const handleWorkoutTypeSelect = (type: string) => {
+    setWorkoutType(type);
+    const typesRequiringExerciseSelection = ["Weights", "Cardio", "Slide Board", "No Equipment"];
+
+    if (editingWorkout) { // If editing, prepare pending workout immediately
+        setPendingWorkout({
+            id: editingWorkout.id,
+            date: editingWorkout.date,
+            workoutType: type, // Use the new type
+            time: editingWorkout.time,
+            exercises: editingWorkout.exercises
+        });
+        setSelectedExercises(editingWorkout.exercises || []);
+    } else {
+        setPendingWorkout({
+            date: schedulingDate!,
+            workoutType: type,
+            time: "", // Time will be set later
+            exercises: []
+        });
+        setSelectedExercises([]);
+    }
+
+    if (typesRequiringExerciseSelection.includes(type)) {
+      // Set filters based on workout type before opening exercise selector
+      if (type === "No Equipment") {
+        setEquipmentFilter("None");
+        setCategoryFilter("No Equipment");
+      } else if (type === "Slide Board") {
+        setEquipmentFilter("Slide Board");
+        setCategoryFilter("Slide Board");
+      } else if (type === "Weights") {
+        setEquipmentFilter("All");
+        setCategoryFilter("Weights");
+      } else if (type === "Cardio") {
+        setEquipmentFilter("All");
+        setCategoryFilter("Cardio");
+      } else {
+        setEquipmentFilter("All");
+        setCategoryFilter("All");
+      }
+      setMuscleGroupFilter("All");
+      setSearchQuery("");
+      setIsExerciseSelectorOpen(true);
+      // Dialog will remain open, but content will change after exercise selection
+    } else {
+      // For types like Custom, Plan, Existing, no immediate exercise selection needed here.
+      // The main dialog's conditional inputs will show.
+      setExerciseSelectionCompleted(true); // Mark as completed to show time/schedule button
+    }
   };
 
   const handleAddExercisesToScheduledWorkout = () => {
     if (!pendingWorkout) return;
 
-    if (pendingWorkout.id) {
-        setScheduledWorkouts(prev => prev.map(w => 
-            w.id === pendingWorkout.id 
-            ? { ...w, exercises: selectedExercises, workoutType: pendingWorkout.workoutType, time: pendingWorkout.time, date: pendingWorkout.date } 
-            : w
-        ));
-        toast.success(`Workout updated for ${format(pendingWorkout.date, 'MMMM do')}`);
-    } else {
-        const newWorkout: ScheduledWorkout = {
-          ...pendingWorkout,
-          id: Math.random().toString(36).substring(2, 15),
-          exercises: selectedExercises,
-        };
-        setScheduledWorkouts(prev => [...prev, newWorkout]);
-        toast.success(`Workout scheduled for ${format(newWorkout.date, 'MMMM do')}`);
-    }
-
+    // Update the pending workout with selected exercises
+    setPendingWorkout(prev => prev ? { ...prev, exercises: selectedExercises } : null);
+    
     setIsExerciseSelectorOpen(false);
-    setPendingWorkout(null);
+    setExerciseSelectionCompleted(true); // Mark exercise selection as complete
+    // Now the main dialog (isDialogOpen) should show time and schedule button
+    // setIsDialogOpen(true) should already be true or re-assert if needed.
   }
 
   const handleDeleteWorkout = () => {
@@ -805,29 +826,58 @@ const MyCalendar = () => {
               setSelectedTemplateId("");
               setSelectedPlanId("");
               setSelectedExistingWorkoutId("");
+              setPendingWorkout(null);
+              setExerciseSelectionCompleted(false);
+              setSelectedExercises([]);
+              setIsScheduleHelpOpen(false); // Close help if dialog closes
           }
       }}>
         <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editingWorkout ? 'Edit Scheduled Workout' : 'Schedule a Workout'}</DialogTitle>
-            <DialogDescription>
-              {schedulingDate && `For ${format(schedulingDate, 'EEEE, MMMM do, yyyy')}`}
-            </DialogDescription>
+          <DialogHeader className="flex flex-row justify-between items-center">
+            <div>
+              <DialogTitle>{editingWorkout ? 'Edit Scheduled Workout' : 'Schedule a Workout'}</DialogTitle>
+              <DialogDescription>
+                {schedulingDate && `For ${format(schedulingDate, 'EEEE, MMMM do, yyyy')}`}
+              </DialogDescription>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setIsScheduleHelpOpen(true)}>
+              <HelpCircle className="h-5 w-5 text-muted-foreground" />
+            </Button>
           </DialogHeader>
           
+          {isScheduleHelpOpen && (
+            <Alert variant="default" className="mt-2 mb-2">
+              <Info className="h-5 w-5" />
+              <AlertDescription>
+                <p className="font-semibold mb-1">How to Schedule a Workout:</p>
+                <ol className="list-decimal list-inside text-sm space-y-1">
+                  <li>Select a <span className="font-medium">Workout Type</span> from the cards below.</li>
+                  <li>If you choose 'Weights', 'Cardio', 'Slide Board', or 'No Equipment', an exercise selection screen will appear. Pick your exercises and click "Add Exercises".</li>
+                  <li>For 'Custom', 'From Plan', or 'From History', select the specific template, plan, or past workout.</li>
+                  <li>(Optional) Set a <span className="font-medium">Time</span> for your workout.</li>
+                  <li>Click the <span className="font-medium">'{editingWorkout ? 'Update Workout' : 'Schedule Workout'}'</span> button to finish.</li>
+                </ol>
+                <div className="text-right mt-2">
+                    <Button variant="outline" size="sm" onClick={() => setIsScheduleHelpOpen(false)}>Got it</Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="py-4">
             <label className="text-sm font-medium mb-3 block text-center">Select Workout Type</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <WorkoutTypeCard icon={Dumbbell} title="Weights" color="blue" onClick={() => setWorkoutType("Weights")} className={cn("h-32", workoutType === 'Weights' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-blue' : '')} />
-              <WorkoutTypeCard icon={Flame} title="Cardio" color="green" onClick={() => setWorkoutType("Cardio")} className={cn("h-32", workoutType === 'Cardio' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-green' : '')} />
-              <WorkoutTypeCard icon={SlidersHorizontal} title="Slide Board" color="red" onClick={() => setWorkoutType("Slide Board")} className={cn("h-32", workoutType === 'Slide Board' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-red' : '')}/>
-              <WorkoutTypeCard icon={PersonStanding} title="No Equipment" color="orange" onClick={() => setWorkoutType("No Equipment")} className={cn("h-32", workoutType === 'No Equipment' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-orange' : '')}/>
-              <WorkoutTypeCard icon={Sparkles} title="Custom" color="purple" onClick={() => setWorkoutType("Custom")} className={cn("h-32", workoutType === 'Custom' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-purple' : '')}/>
-              <WorkoutTypeCard icon={ClipboardList} title="From Plan" color="blue" onClick={() => setWorkoutType("Plan")} className={cn("h-32", workoutType === 'Plan' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-blue' : '')} />
-              <WorkoutTypeCard icon={History} title="From History" color="green" onClick={() => setWorkoutType("Existing")} className={cn("h-32", workoutType === 'Existing' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-green' : '')} />
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3"> { /* Reduced gap here */} 
+              <WorkoutTypeCard icon={Dumbbell} title="Weights" color="blue" onClick={() => handleWorkoutTypeSelect("Weights")} className={cn("h-20 md:h-24", workoutType === 'Weights' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-blue' : '')} />
+              <WorkoutTypeCard icon={Flame} title="Cardio" color="green" onClick={() => handleWorkoutTypeSelect("Cardio")} className={cn("h-20 md:h-24", workoutType === 'Cardio' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-green' : '')} />
+              <WorkoutTypeCard icon={SlidersHorizontal} title="Slide Board" color="red" onClick={() => handleWorkoutTypeSelect("Slide Board")} className={cn("h-20 md:h-24", workoutType === 'Slide Board' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-red' : '')}/>
+              <WorkoutTypeCard icon={PersonStanding} title="No Equipment" color="orange" onClick={() => handleWorkoutTypeSelect("No Equipment")} className={cn("h-20 md:h-24", workoutType === 'No Equipment' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-orange' : '')}/>
+              <WorkoutTypeCard icon={Sparkles} title="Custom" color="purple" onClick={() => handleWorkoutTypeSelect("Custom")} className={cn("h-20 md:h-24", workoutType === 'Custom' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-purple' : '')}/>
+              <WorkoutTypeCard icon={ClipboardList} title="From Plan" color="blue" onClick={() => handleWorkoutTypeSelect("Plan")} className={cn("h-20 md:h-24", workoutType === 'Plan' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-blue' : '')} />
+              <WorkoutTypeCard icon={History} title="From History" color="green" onClick={() => handleWorkoutTypeSelect("Existing")} className={cn("h-20 md:h-24", workoutType === 'Existing' ? 'ring-2 ring-offset-2 ring-offset-background ring-gym-green' : '')} />
             </div>
 
-            {/* Conditional inputs based on workout type */}
+            {/* Conditional inputs based on workout type AND if exercise selection is done or not needed */} 
+            {(exerciseSelectionCompleted || !["Weights", "Cardio", "Slide Board", "No Equipment"].includes(workoutType)) && (
             <div className="mt-6 space-y-4">
               {workoutType === "Custom" && (
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -900,15 +950,24 @@ const MyCalendar = () => {
                 </div>
               </div>
             </div>
+            )}
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+                setIsDialogOpen(false);
+                setEditingWorkout(null);
+                setPendingWorkout(null);
+                setExerciseSelectionCompleted(false);
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleScheduleDialogSubmit}>
-              {editingWorkout ? 'Update' : 'Schedule'}
-            </Button>
+            {/* Show Schedule button only if exercises are selected or not needed */} 
+            {(exerciseSelectionCompleted || !["Weights", "Cardio", "Slide Board", "No Equipment"].includes(workoutType)) && (
+                <Button onClick={handleScheduleDialogSubmit}>
+                {editingWorkout ? 'Update Workout' : 'Schedule Workout'}
+                </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
