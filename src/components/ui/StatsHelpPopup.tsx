@@ -6,6 +6,8 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 interface StatsHelpPopupProps {
   isOpen: boolean;
   onClose: () => void;
+  title?: string;
+  description?: string; // Added description prop
 }
 
 const helpPages = [
@@ -31,12 +33,17 @@ const helpPages = [
     }
 ];
 
-const StatsHelpPopup = ({ isOpen, onClose }: StatsHelpPopupProps) => {
+const StatsHelpPopup = ({ isOpen, onClose, title, description }: StatsHelpPopupProps) => {
   const [currentPage, setCurrentPage] = useState(0);
   const page = helpPages[currentPage];
 
+  // If a description is provided directly, use it as the only page
+  // Otherwise, use the default helpPages
+  const pagesToDisplay = description ? [{ title: title || "Help", content: description }] : helpPages;
+  const currentDisplayPage = pagesToDisplay[currentPage];
+
   const handleNext = () => {
-    if (currentPage < helpPages.length - 1) {
+    if (currentPage < pagesToDisplay.length - 1) {
       setCurrentPage(currentPage + 1);
     }
   };
@@ -46,39 +53,41 @@ const StatsHelpPopup = ({ isOpen, onClose }: StatsHelpPopupProps) => {
       setCurrentPage(currentPage - 1);
     }
   };
-  
-  const handleClose = () => {
-    setCurrentPage(0);
-    onClose();
-  }
+
+  if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px] bg-gray-800 text-white border-gray-700">
         <DialogHeader>
-          <DialogTitle>{page.title}</DialogTitle>
+          <DialogTitle className="text-white">{currentDisplayPage.title}</DialogTitle>
         </DialogHeader>
-        <div className="py-4 min-h-[200px]">
-            <p className="whitespace-pre-wrap text-sm text-muted-foreground leading-relaxed">
-                {page.content}
-            </p>
+        <div className="py-4 text-sm text-gray-300 whitespace-pre-wrap">
+          {currentDisplayPage.content}
         </div>
-        <DialogFooter className="flex justify-between w-full">
-          <Button variant="outline" onClick={handlePrev} disabled={currentPage === 0}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="text-sm text-muted-foreground flex items-center">
-            {currentPage + 1} / {helpPages.length}
-          </div>
-          {currentPage < helpPages.length - 1 ? (
-              <Button variant="outline" onClick={handleNext}>
-                  <ArrowRight className="h-4 w-4" />
-              </Button>
-          ) : (
-              <Button onClick={handleClose}>
-                  Close
-              </Button>
+        <DialogFooter className="flex justify-between items-center">
+          {pagesToDisplay.length > 1 && (
+            <div className="text-xs text-gray-400">
+              Page {currentPage + 1} of {pagesToDisplay.length}
+            </div>
           )}
+          <div className="flex gap-2">
+            {pagesToDisplay.length > 1 && currentPage > 0 && (
+              <Button variant="outline" onClick={handlePrev} className="text-white border-gray-600 hover:bg-gray-700">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Previous
+              </Button>
+            )}
+            {pagesToDisplay.length > 1 && currentPage < pagesToDisplay.length - 1 && (
+              <Button variant="outline" onClick={handleNext} className="text-white border-gray-600 hover:bg-gray-700">
+                Next <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+            {pagesToDisplay.length === 1 && (
+                 <Button onClick={onClose} className="bg-blue-600 hover:bg-blue-700">
+                    Close
+                 </Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

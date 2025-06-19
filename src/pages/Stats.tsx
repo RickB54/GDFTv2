@@ -4,7 +4,7 @@ import { useWorkout } from '@/contexts/WorkoutContext';
 import { useExercise } from '@/contexts/ExerciseContext';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { HelpCircle, Trash2, Edit, Save, X, Dumbbell, Clock, ListChecks, Repeat, BarChart2, ChevronDown, ChevronsRight, ChevronsLeft, ArchiveRestore, Play } from 'lucide-react';
+import { HelpCircle, Trash2, Edit, Save, X, Dumbbell, Clock, ListChecks, Repeat, BarChart2, ChevronDown, ChevronsRight, ChevronsLeft, ArchiveRestore, Play, User, Activity } from 'lucide-react'; // Added User and Activity icons
 import StatsHelpPopup from '@/components/ui/StatsHelpPopup';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,6 +40,8 @@ const Stats = () => {
     const { getExerciseById } = useExercise();
     const navigate = useNavigate();
     const [showHelp, setShowHelp] = useState(false);
+    const [showBodyMetricsHelp, setShowBodyMetricsHelp] = useState(false); // New state
+    const [showHealthMetricsHelp, setShowHealthMetricsHelp] = useState(false); // New state
     const [editingWorkoutId, setEditingWorkoutId] = useState<string | null>(null);
     const [editedNotes, setEditedNotes] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -254,13 +256,31 @@ const Stats = () => {
 
     return (
         <div className="page-container page-transition">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
                 <h1 className="text-2xl font-bold">Workout Stats</h1>
-                <Button variant="ghost" size="icon" onClick={() => setShowHelp(true)}>
-                    <HelpCircle className="h-6 w-6" />
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => navigate('/body-metrics')}> {/* Placeholder navigation */} 
+                        <User className="mr-2 h-4 w-4" /> Body Metrics
+                    </Button>
+                    {/* <Button variant="ghost" size="icon" onClick={() => setShowBodyMetricsHelp(true)}>
+                        <HelpCircle className="h-5 w-5" />
+                    </Button> */}
+                    <Button variant="outline" size="sm" onClick={() => { /* Placeholder for Health Metrics popup */ toast.info('Health Metrics popup coming soon!'); }}>
+                        <Activity className="mr-2 h-4 w-4" /> Health Metrics
+                    </Button>
+                    {/* <Button variant="ghost" size="icon" onClick={() => setShowHealthMetricsHelp(true)}>
+                        <HelpCircle className="h-5 w-5" />
+                    </Button> */}
+                    <Button variant="ghost" size="icon" onClick={() => setShowHelp(true)} title="Help with Workout Stats">
+                        <HelpCircle className="h-6 w-6" />
+                    </Button>
+                </div>
             </div>
-            <StatsHelpPopup isOpen={showHelp} onClose={() => setShowHelp(false)} />
+            <StatsHelpPopup isOpen={showHelp} onClose={() => setShowHelp(false)} title="Workout Stats Help" />
+            {/* Placeholder for Body Metrics Help Popup */}
+            {/* <StatsHelpPopup isOpen={showBodyMetricsHelp} onClose={() => setShowBodyMetricsHelp(false)} title="Body Metrics Help" /> */}
+            {/* Placeholder for Health Metrics Help Popup */}
+            {/* <StatsHelpPopup isOpen={showHealthMetricsHelp} onClose={() => setShowHealthMetricsHelp(false)} title="Health Metrics Help" /> */}
             <WorkoutStatsGraphPopup
                 isOpen={!!selectedWorkout}
                 onClose={() => setSelectedWorkout(null)}
@@ -318,7 +338,7 @@ const Stats = () => {
                         <DateRangePicker 
                             value={dateRange} 
                             onDateChange={setDateRange} 
-                            calendarClassName="p-3 scale-110 origin-top-right"
+                            calendarClassName="p-3 origin-top-right w-96"
                         />
                     </div>
                 </div>
