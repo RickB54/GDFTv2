@@ -45,7 +45,7 @@ const Workout = () => {
     savedWorkoutTemplates,
     startSavedWorkout,
     deleteSavedWorkout,
-    updateCurrentWorkoutNotes // Added this line
+    updateCurrentWorkoutNotes // Add this line
   } = useWorkout();
   
   const searchParams = new URLSearchParams(location.search);
@@ -74,6 +74,13 @@ const Workout = () => {
   const [editingSet, setEditingSet] = useState<WorkoutSet | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
 
+  // Add this useEffect to load notes from the current workout
+  useEffect(() => {
+    if (currentWorkout?.notes) {
+      setNotes(currentWorkout.notes);
+    }
+  }, [currentWorkout?.id]);
+
   // Reset workout time when currentWorkout changes
   useEffect(() => {
     console.log("Current workout changed:", currentWorkout);
@@ -82,13 +89,11 @@ const Workout = () => {
     if (currentWorkout) {
       console.log("Setting show active workout to true because currentWorkout exists");
       setShowActiveWorkout(true);
-      setWorkoutTime(currentWorkout.totalTime || 0); // Resume timer if workout was loaded
-      setNotes(currentWorkout.notes || ""); // Initialize notes from currentWorkout
+      setWorkoutTime(0); // Reset timer for new workout
     } else {
       console.log("No current workout, keeping showActiveWorkout as is");
-      setNotes(""); // Clear notes if no active workout
     }
-  }, [currentWorkout?.id, currentWorkout?.notes]); // Added currentWorkout.notes dependency
+  }, [currentWorkout?.id]);
 
   useEffect(() => {
     if (exerciseId && !currentWorkout) {
@@ -156,13 +161,6 @@ const Workout = () => {
       setCurrentExercise(getExerciseById(exerciseId) || null);
     }
   }, [currentExerciseIndex, currentWorkout, getExerciseById]);
-
-  // Update notes in context when local notes change
-  useEffect(() => {
-    if (currentWorkout && updateCurrentWorkoutNotes) {
-      updateCurrentWorkoutNotes(notes);
-    }
-  }, [notes, currentWorkout, updateCurrentWorkoutNotes]);
   
   const formatTime = (timeInSeconds: number) => {
     const minutes = Math.floor(timeInSeconds / 60);
@@ -201,6 +199,13 @@ const Workout = () => {
   const handleViewNotes = () => {
     if (currentExercise) {
       setShowNotesForm(true);
+    }
+  };
+
+  const handleSaveNotes = () => {
+    if (currentWorkout) {
+      updateCurrentWorkoutNotes(notes);
+      toast.success("Notes saved!");
     }
   };
   
@@ -950,12 +955,18 @@ const Workout = () => {
         
         {showNotesForm && (
           <div className="mb-6">
-            <Textarea
-              placeholder="Add notes for this workout..."
+            <textarea
+              className="w-full h-24 bg-gym-dark border border-gray-700 rounded-lg p-3 text-sm"
+              placeholder="Add notes about this exercise..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="mt-2 w-full h-24 bg-gym-dark border border-gray-700 rounded-lg p-3 text-sm"
             />
+            <button
+              className="mt-2 w-full bg-gym-blue text-white py-2 rounded-lg font-medium hover:bg-blue-600 transition-colors"
+              onClick={handleSaveNotes}
+            >
+              Save Notes
+            </button>
           </div>
         )}
         

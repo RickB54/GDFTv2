@@ -259,18 +259,22 @@ const Stats = () => {
             <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
                 <h1 className="text-2xl font-bold">Workout Stats</h1>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => navigate('/body-metrics')}> {/* Placeholder navigation */} 
+                    <Button variant="outline" size="sm" onClick={() => navigate('/body-metrics')}> 
                         <User className="mr-2 h-4 w-4" /> Body Metrics
                     </Button>
                     {/* <Button variant="ghost" size="icon" onClick={() => setShowBodyMetricsHelp(true)}>
                         <HelpCircle className="h-5 w-5" />
                     </Button> */}
-                    <Button variant="outline" size="sm" onClick={() => { /* Placeholder for Health Metrics popup */ toast.info('Health Metrics popup coming soon!'); }}>
+                    
+                    {/* Health Metrics Button Block - REMOVED
+                    <Button variant="outline" size="sm" onClick={() => { toast.info('Health Metrics popup coming soon!'); }}>
                         <Activity className="mr-2 h-4 w-4" /> Health Metrics
                     </Button>
-                    {/* <Button variant="ghost" size="icon" onClick={() => setShowHealthMetricsHelp(true)}>
+                    <Button variant="ghost" size="icon" onClick={() => setShowHealthMetricsHelp(true)}>
                         <HelpCircle className="h-5 w-5" />
-                    </Button> */}
+                    </Button> 
+                    */}
+
                     <Button variant="ghost" size="icon" onClick={() => setShowHelp(true)} title="Help with Workout Stats">
                         <HelpCircle className="h-6 w-6" />
                     </Button>
@@ -279,8 +283,11 @@ const Stats = () => {
             <StatsHelpPopup isOpen={showHelp} onClose={() => setShowHelp(false)} title="Workout Stats Help" />
             {/* Placeholder for Body Metrics Help Popup */}
             {/* <StatsHelpPopup isOpen={showBodyMetricsHelp} onClose={() => setShowBodyMetricsHelp(false)} title="Body Metrics Help" /> */}
-            {/* Placeholder for Health Metrics Help Popup */}
-            {/* <StatsHelpPopup isOpen={showHealthMetricsHelp} onClose={() => setShowHealthMetricsHelp(false)} title="Health Metrics Help" /> */}
+            
+            {/* Placeholder for Health Metrics Help Popup - REMOVED
+            <StatsHelpPopup isOpen={showHealthMetricsHelp} onClose={() => setShowHealthMetricsHelp(false)} title="Health Metrics Help" />
+            */}
+
             <WorkoutStatsGraphPopup
                 isOpen={!!selectedWorkout}
                 onClose={() => setSelectedWorkout(null)}
@@ -416,7 +423,20 @@ const Stats = () => {
                                             {workout.exercises.map((exerciseId, index) => {
                                                 const exercise = getExerciseById(exerciseId);
                                                 const setsForExercise = workout.sets.filter(s => s.exerciseId === exerciseId && s.completed);
-                                                if (!exercise) return null;
+                                                
+                                                if (!exercise) {
+                                                    return (
+                                                        <tr key={`not-found-${index}-${exerciseId}`} className="border-t border-gray-700">
+                                                            <td className="p-2 font-medium text-red-400 italic">Exercise not found (ID: {exerciseId})</td>
+                                                            <td className="p-2 text-right">-</td>
+                                                            <td className="p-2 text-right">-</td>
+                                                            <td className="p-2 text-right">-</td>
+                                                            <td className="p-2 text-right">-</td>
+                                                            <td className="p-2 text-right">-</td>
+                                                            <td className="p-2 text-right">-</td>
+                                                        </tr>
+                                                    );
+                                                }
 
                                                 const totalReps = setsForExercise.reduce((sum, set) => sum + (set.reps || 0), 0);
                                                 const avgWeight = setsForExercise.length > 0 && setsForExercise.some(s => s.weight) ? setsForExercise.reduce((sum, set) => sum + (set.weight || 0), 0) / setsForExercise.filter(s => s.weight).length : 0;
@@ -428,7 +448,7 @@ const Stats = () => {
                                                     const inclines = setsForExercise.map(s => s.incline).filter(inc => typeof inc === 'number');
                                                     if (inclines.length > 0) {
                                                         const avgIncline = inclines.reduce((sum, inc) => sum + inc!, 0) / inclines.length;
-                                                        avgInclineDisplay = `${Math.round(avgIncline)}`; // Display as rounded whole number
+                                                        avgInclineDisplay = `${avgIncline.toFixed(0)}`; // Display as rounded whole number
                                                     }
                                                 }
 

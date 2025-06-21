@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, ClipboardList, Dumbbell, SlidersHorizontal, HeartPulse, User, Plus, HelpCircle, LucideProps } from 'lucide-react';
+import { BarChart, ClipboardList, Dumbbell, SlidersHorizontal, HeartPulse, User, Plus, HelpCircle, LucideProps, Activity, Scale } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WorkoutTypeCard from '@/components/ui/WorkoutTypeCard';
 import HomeHelpPopup from '@/components/ui/HomeHelpPopup';
@@ -11,29 +11,32 @@ interface HomeCardProps {
   title: string;
   description: string;
   onClick: () => void;
-  color: 'blue' | 'purple' | 'green' | 'red' | 'orange';
+  color: 'blue' | 'purple' | 'green' | 'red' | 'orange' | 'teal' | 'pink'; // Added more color options for flexibility
+  className?: string; // Allow passing additional classNames for sizing
 }
 
-const HomeCard = ({ icon: Icon, title, description, onClick, color }: HomeCardProps) => {
+const HomeCard = ({ icon: Icon, title, description, onClick, color, className }: HomeCardProps) => {
   const colorClasses = {
     blue: 'bg-blue-500/20 text-blue-400',
     purple: 'bg-purple-500/20 text-purple-400',
     green: 'bg-green-500/20 text-green-400',
     red: 'bg-red-500/20 text-red-400',
     orange: 'bg-orange-500/20 text-orange-400',
+    teal: 'bg-teal-500/20 text-teal-400',
+    pink: 'bg-pink-500/20 text-pink-400',
   };
 
   return (
     <div
-      className="bg-gym-card p-4 rounded-lg flex items-center cursor-pointer transition-colors hover:bg-gym-dark-card h-full"
+      className={`bg-gym-card p-4 rounded-lg flex items-center cursor-pointer transition-colors hover:bg-gym-dark-card h-full ${className}`}
       onClick={onClick}
     >
       <div className={`p-3 rounded-lg mr-4 ${colorClasses[color]}`}>
         <Icon className="h-6 w-6" />
       </div>
       <div>
-        <h3 className="font-semibold text-lg">{title}</h3>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <h3 className="font-semibold text-md md:text-lg">{title}</h3> {/* Adjusted text size for smaller buttons if needed */}
+        <p className="text-xs md:text-sm text-muted-foreground">{description}</p>
       </div>
     </div>
   );
@@ -45,10 +48,10 @@ const Index = () => {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   const workoutTypes = [
-    { title: "Standard Weights", icon: Dumbbell, color: "blue", type: "Weights" },
-    { title: "Slide Board", icon: SlidersHorizontal, color: "green", type: "Slide Board" },
-    { title: "Cardio", icon: HeartPulse, color: "red", type: "Cardio" },
-    { title: "No Equipment", icon: User, color: "purple", type: "No Equipment" },
+    { title: "Standard Weights", icon: Dumbbell, color: "blue" as const, type: "Weights" },
+    { title: "Slide Board", icon: SlidersHorizontal, color: "green" as const, type: "Slide Board" },
+    { title: "Cardio", icon: HeartPulse, color: "red" as const, type: "Cardio" },
+    { title: "No Equipment", icon: User, color: "purple" as const, type: "No Equipment" },
   ];
 
   return (
@@ -62,6 +65,7 @@ const Index = () => {
       </div>
 
       <div className="space-y-4 mb-8">
+        {/* Monitor Progress - Full Width */}
         <HomeCard
           icon={BarChart}
           title="Monitor Progress"
@@ -69,20 +73,44 @@ const Index = () => {
           onClick={() => navigate('/stats')}
           color="blue"
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {/* Create Plans & Your Custom Plans - Two per row */}
+        <div className="grid grid-cols-2 gap-4">
           <HomeCard
             icon={ClipboardList}
             title="Create Plans"
-            description="Build and follow custom workout plans"
+            description="Build and follow custom plans"
             onClick={() => navigate('/custom-plans')}
             color="purple"
+            className="w-full" // Ensure it takes full width of its grid cell
           />
           <HomeCard
-            icon={ClipboardList}
+            icon={ClipboardList} // Consider a different icon if desired
             title="Your Custom Plans"
-            description="View your saved workout plans"
+            description="View your saved plans"
             onClick={() => navigate('/custom-plans?showPlans=true')}
             color="green"
+            className="w-full" // Ensure it takes full width of its grid cell
+          />
+        </div>
+
+        {/* Body Metrics & Health Metrics - Two per row */}
+        <div className="grid grid-cols-2 gap-4">
+          <HomeCard
+            icon={Scale} // Icon for Body Metrics
+            title="Body Metrics"
+            description="Track body measurements"
+            onClick={() => navigate('/body-metrics')}
+            color="orange"
+            className="w-full" // Ensure it takes full width of its grid cell
+          />
+          <HomeCard
+            icon={Activity} // Icon for Health Metrics
+            title="Health Metrics"
+            description="Log your health data"
+            onClick={() => navigate('/new-health-metrics')}
+            color="red"
+            className="w-full" // Ensure it takes full width of its grid cell
           />
         </div>
       </div>

@@ -17,10 +17,8 @@ import Workout from "./pages/Workout";
 import Stats from "./pages/Stats";
 import Calendar from "./pages/Calendar";
 import MyCalendar from "./pages/MyCalendar";
-// Make sure SettingsPage is imported if you have it, or Settings if that's the correct component
-import SettingsPage from "./pages/Settings"; // Or './pages/SettingsPage' if that's the actual file name
+import SettingsPage from "./pages/Settings";
 import CustomPlans from "./pages/CustomPlans";
-import HealthMetrics from "./pages/HealthMetrics";
 import BodyMetricsPage from "./pages/BodyMetricsPage";
 import NotFound from "./pages/NotFound";
 // Assuming Header and Footer components exist and are imported if used
@@ -50,7 +48,6 @@ function App() {
                       <Route path="/calendar" element={<Calendar />} />
                       <Route path="/my-calendar" element={<MyCalendar />} />
                       <Route path="/custom-plans" element={<CustomPlans />} />
-                      <Route path="/health-metrics" element={<HealthMetrics />} />
                       <Route path="/body-metrics" element={<BodyMetricsPage />} />
                       <Route path="/settings" element={<SettingsPage />} /> {/* Ensure this component exists */}
                       <Route path="*" element={<NotFound />} />
