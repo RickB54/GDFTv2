@@ -19,11 +19,15 @@ const helpPages = [
         content: "- Monitor Progress: View your workout statistics and body measurements.\n\n- Create Plans: Design multi-day workout routines.\n\n- Your Custom Plans: Access and manage the plans you've created."
     },
     {
-        title: "2. Starting a Workout",
+        title: "2. Health & Body Tracking",
+        content: "- Body Metrics: Track detailed body measurements and calculate your BMI.\n\n- Health Metrics: Log general health data like sleep, stress, and hydration."
+    },
+    {
+        title: "3. Starting a Workout",
         content: "You can quickly start a workout in several ways:\n\n- Select a Workout Type: Choose from Standard Weights, Slide Board, Cardio, or No Equipment to see a list of relevant exercises.\n\n- Create a Custom Workout: Build a one-off workout session from scratch.\n\n- Show Custom Workouts: View and start workouts from your saved templates."
     },
     {
-        title: "3. Navigation",
+        title: "4. Navigation",
         content: "Use the bottom navigation bar to access other key areas of the app:\n\n- Home (this screen)\n- Calendar: Schedule and view your workouts.\n- Exercises: Browse and manage your exercise library.\n- Stats: See detailed progress charts.\n- Settings: Manage app data and preferences."
     }
 ];

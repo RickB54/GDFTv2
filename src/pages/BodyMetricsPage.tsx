@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { ChevronLeft, ChevronRight, Upload, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload, Trash2, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StatsHelpPopup from '@/components/ui/StatsHelpPopup';
 import { useSettings, UnitSystem } from '@/contexts/SettingsContext';
@@ -69,6 +69,7 @@ const BodyMetricsPage = () => {
   const { unitSystem } = useSettings();
   const { addBodyMeasurement, updateBodyMeasurement } = useWorkout();
 
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [bmiData, setBmiData] = useState<BmiData>({ heightFt: '', heightIn: '', weight: '', age: '', sex: '' });
   const [bmiResult, setBmiResult] = useState<BmiResult | null>(null);
 
@@ -393,11 +394,14 @@ const BodyMetricsPage = () => {
           <ChevronLeft className="h-6 w-6" />
         </Button>
         <h1 className="text-2xl md:text-3xl font-bold text-center text-white flex-grow">Body Metrics</h1>
+        <Button variant="ghost" size="icon" onClick={() => setIsHelpOpen(true)} className="text-white">
+            <HelpCircle className="h-6 w-6" />
+        </Button>
         <StatsHelpPopup 
             title="Body Metrics Help"
-            description="Track your body measurements and visual progress. Upload photos for personal reference and muscle diagrams to visualize changes. All data is stored locally in your browser."
-            isOpen={false}
-            onClose={() => {}}
+            description="On this page, you can track your body measurements, and upload progress photos. All data is stored locally on your device. The BMI Calculator helps you determine your Body Mass Index based on height, weight, age, and sex. Your BMI is a key indicator of your health, and the result is displayed on a color-coded scale to help you understand your current status. You can save all your data, including your BMI results, using the 'Save All Data' button at the bottom."
+            isOpen={isHelpOpen}
+            onClose={() => setIsHelpOpen(false)}
         />
       </div>
 
