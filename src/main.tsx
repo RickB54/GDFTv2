@@ -1,4 +1,5 @@
 
+import React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
@@ -18,7 +19,15 @@ if (exercises.length === 0) {
 } else {
   // Make sure all exercises are properly saved
   saveExercises(exercises);
-  console.log(`Ensured ${exercises.length} exercises are persisted to local storage`);
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+const container = document.getElementById('root');
+if (container) {
+  const root = createRoot(container);
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+}
+console.log(`Ensured ${exercises.length} exercises are persisted to local storage`);

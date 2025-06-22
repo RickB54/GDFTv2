@@ -410,18 +410,16 @@ const Settings = () => {
           </div>
         </div>
         
-        <div className="card-glass p-4">
-          <h2 className="text-lg font-medium mb-4">About</h2>
-          <div className="flex items-start mb-4">
-            <Info className="h-5 w-5 text-muted-foreground mr-2 flex-shrink-0 mt-0.5" />
+        <div className="card-glass p-6 rounded-lg">
+          <h2 className="text-xl font-semibold mb-4">About</h2>
+          <div className="flex items-center gap-4 text-gray-300">
+            <Info className="h-8 w-8 text-primary" />
             <div>
-              <h3 className="text-sm font-medium">GymDayFitTracker</h3>
-              <p className="text-sm text-muted-foreground">
-                Version 2.0
-              </p>
+              <p className="font-bold text-lg">GymDayFitTracker</p>
+              <p className="text-sm">Version 2.1</p>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="mt-4 text-gray-400">
             Track your workouts, monitor your progress, and achieve your fitness goals with GymDayFitTracker.
           </p>
         </div>

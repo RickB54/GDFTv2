@@ -108,7 +108,7 @@ const Index = () => {
             icon={Activity} // Icon for Health Metrics
             title="Health Metrics"
             description="Log your health data"
-            onClick={() => navigate('/new-health-metrics')}
+            onClick={() => navigate('/2nd-health-metrics')}
             color="red"
             className="w-full" // Ensure it takes full width of its grid cell
           />

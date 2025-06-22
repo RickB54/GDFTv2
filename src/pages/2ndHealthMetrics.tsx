@@ -1,68 +1,38 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+// Final version - 20231027
+import React, { useState, useEffect, useCallback } from 'react';
 import { useWorkout, HealthMetric } from '@/contexts/WorkoutContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Assuming you have a Select component
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
-// Helper function for BMI Calculation (example)
-const calculateBmi = (weightKg?: number, heightM?: number): number | null => {
-  if (weightKg && heightM && heightM > 0) {
-    return parseFloat((weightKg / (heightM * heightM)).toFixed(2));
-  }
-  return null;
-};
-
-const NewHealthMetricsPage: React.FC = () => {
+const SecondHealthMetricsPage: React.FC = () => {
   const { healthMetrics, addHealthMetric, updateHealthMetric } = useWorkout();
+  const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMetricId, setCurrentMetricId] = useState<string | null>(null);
 
-  // BMI Calculator States
-  const [bmiAge, setBmiAge] = useState<string>(''); // Age might not be directly used in standard BMI, but often collected
-  const [bmiHeight, setBmiHeight] = useState<string>('');
-  const [bmiWeight, setBmiWeight] = useState<string>('');
-  const [bmiHeightUnit, setBmiHeightUnit] = useState<'cm' | 'in'>('cm');
-  const [bmiWeightUnit, setBmiWeightUnit] = useState<'kg' | 'lb'>('kg');
-
-  // Existing states
   const [sleepDurationHours, setSleepDurationHours] = useState<string>('');
   const [sleepQualityRating, setSleepQualityRating] = useState<string>('');
   const [waterIntakeMl, setWaterIntakeMl] = useState<string>('');
   const [waterIntakeUnit, setWaterIntakeUnit] = useState<'ml' | 'fl oz'>('ml');
   const [stressLevelRating, setStressLevelRating] = useState<string>('');
   const [stepsTaken, setStepsTaken] = useState<string>('');
-  
-  // New states for additional metrics
   const [heartRate, setHeartRate] = useState<string>('');
   const [caloriesBurned, setCaloriesBurned] = useState<string>('');
-  const [calorieIntake, setCalorieIntake] = useState<string>(''); // New
+  const [calorieIntake, setCalorieIntake] = useState<string>('');
   const [bloodPressureSystolic, setBloodPressureSystolic] = useState<string>('');
   const [bloodPressureDiastolic, setBloodPressureDiastolic] = useState<string>('');
   const [glucose, setGlucose] = useState<string>('');
   const [glucoseUnit, setGlucoseUnit] = useState<'mg/dL' | 'mmol/L'>('mg/dL');
-  
   const [notes, setNotes] = useState<string>('');
-
-  const calculatedBmi = useMemo(() => {
-    const weightNum = parseFloat(bmiWeight);
-    const heightNum = parseFloat(bmiHeight);
-    let weightInKg: number | undefined = weightNum;
-    let heightInM: number | undefined = heightNum;
-
-    if (isNaN(weightNum) || isNaN(heightNum)) return null;
-
-    if (bmiWeightUnit === 'lb') {
-      weightInKg = weightNum * 0.453592;
-    }
-    if (bmiHeightUnit === 'cm') {
-      heightInM = heightNum / 100;
-    } else if (bmiHeightUnit === 'in') {
-      heightInM = heightNum * 0.0254;
-    }
-    return calculateBmi(weightInKg, heightInM);
-  }, [bmiWeight, bmiHeight, bmiWeightUnit, bmiHeightUnit]);
 
   const resetForm = useCallback(() => {
     setSleepDurationHours('');
@@ -78,10 +48,6 @@ const NewHealthMetricsPage: React.FC = () => {
     setGlucose('');
     setNotes('');
     setCurrentMetricId(null);
-    // Reset BMI fields too if desired, or keep them for continuous calculation
-    // setBmiAge('');
-    // setBmiHeight('');
-    // setBmiWeight('');
   }, []);
 
   useEffect(() => {
@@ -91,18 +57,17 @@ const NewHealthMetricsPage: React.FC = () => {
     if (existingMetric) {
       setSleepDurationHours(existingMetric.sleepDurationHours?.toString() || '');
       setSleepQualityRating(existingMetric.sleepQualityRating?.toString() || '');
-      setWaterIntakeMl(existingMetric.waterIntakeMl?.toString() || ''); // Assuming stored in ml
+      setWaterIntakeMl(existingMetric.waterIntakeMl?.toString() || '');
       setStressLevelRating(existingMetric.stressLevelRating?.toString() || '');
       setStepsTaken(existingMetric.stepsTaken?.toString() || '');
       setHeartRate(existingMetric.heartRate?.toString() || '');
       setCaloriesBurned(existingMetric.caloriesBurned?.toString() || '');
-      setCalorieIntake(existingMetric.calorieIntake?.toString() || ''); // New
+      setCalorieIntake(existingMetric.calorieIntake?.toString() || '');
       setBloodPressureSystolic(existingMetric.bloodPressureSystolic?.toString() || '');
       setBloodPressureDiastolic(existingMetric.bloodPressureDiastolic?.toString() || '');
-      setGlucose(existingMetric.glucose?.toString() || ''); // Assuming stored in mg/dL
+      setGlucose(existingMetric.glucose?.toString() || '');
       setNotes(existingMetric.notes || '');
       setCurrentMetricId(existingMetric.id);
-      // Note: Unit preferences might need to be loaded if they are stored per metric entry
     } else {
       resetForm();
     }
@@ -113,15 +78,15 @@ const NewHealthMetricsPage: React.FC = () => {
     
     let waterIntakeFinal = waterIntakeMl ? parseInt(waterIntakeMl) : undefined;
     if (waterIntakeUnit === 'fl oz' && waterIntakeFinal) {
-      waterIntakeFinal = Math.round(waterIntakeFinal * 29.5735); // to ml
+      waterIntakeFinal = Math.round(waterIntakeFinal * 29.5735);
     }
 
     let glucoseFinal = glucose ? parseFloat(glucose) : undefined;
     if (glucoseUnit === 'mmol/L' && glucoseFinal) {
-        glucoseFinal = Math.round(glucoseFinal * 18.0182); // to mg/dL
+        glucoseFinal = Math.round(glucoseFinal * 18.0182);
     }
 
-    const metricData: Omit<HealthMetric, 'id'> = {
+    const metricData: Omit<HealthMetric, 'id' | 'workoutId'> = {
       date: dateString,
       sleepDurationHours: sleepDurationHours ? parseFloat(sleepDurationHours) : undefined,
       sleepQualityRating: sleepQualityRating ? parseInt(sleepQualityRating) : undefined,
@@ -130,7 +95,7 @@ const NewHealthMetricsPage: React.FC = () => {
       stepsTaken: stepsTaken ? parseInt(stepsTaken) : undefined,
       heartRate: heartRate ? parseInt(heartRate) : undefined,
       caloriesBurned: caloriesBurned ? parseInt(caloriesBurned) : undefined,
-      calorieIntake: calorieIntake ? parseInt(calorieIntake) : undefined, // New
+      calorieIntake: calorieIntake ? parseInt(calorieIntake) : undefined,
       bloodPressureSystolic: bloodPressureSystolic ? parseInt(bloodPressureSystolic) : undefined,
       bloodPressureDiastolic: bloodPressureDiastolic ? parseInt(bloodPressureDiastolic) : undefined,
       glucose: glucoseFinal, 
@@ -142,64 +107,37 @@ const NewHealthMetricsPage: React.FC = () => {
     } else {
       addHealthMetric(metricData);
     }
-    alert('Health metrics saved!');
+    toast({ title: "Success", description: "Health metrics have been saved." });
   };
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4 pb-20">
       <h1 className="text-2xl font-bold mb-6">Comprehensive Health Metrics</h1>
       
-      {/* BMI Calculator Section */}
-      <div className="bg-gym-card p-4 rounded-lg mb-6">
-        <h2 className="text-xl font-semibold mb-3">BMI Calculator</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-          <div>
-            <Label htmlFor="bmi-age">Age (Years)</Label>
-            <Input id="bmi-age" type="number" value={bmiAge} onChange={(e) => setBmiAge(e.target.value)} placeholder="e.g., 30" />
-          </div>
-          <div>
-            <Label htmlFor="bmi-height">Height</Label>
-            <div className="flex gap-2">
-              <Input id="bmi-height" type="number" value={bmiHeight} onChange={(e) => setBmiHeight(e.target.value)} placeholder="e.g., 170" className="flex-grow" />
-              <Select value={bmiHeightUnit} onValueChange={(value: 'cm' | 'in') => setBmiHeightUnit(value)}>
-                <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cm">cm</SelectItem>
-                  <SelectItem value="in">in</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="bmi-weight">Weight</Label>
-            <div className="flex gap-2">
-              <Input id="bmi-weight" type="number" value={bmiWeight} onChange={(e) => setBmiWeight(e.target.value)} placeholder="e.g., 70" className="flex-grow" />
-              <Select value={bmiWeightUnit} onValueChange={(value: 'kg' | 'lb') => setBmiWeightUnit(value)}>
-                <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="kg">kg</SelectItem>
-                  <SelectItem value="lb">lb</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-        {calculatedBmi !== null && (
-          <div className="mt-3 text-lg font-semibold">
-            Calculated BMI: <span className="text-blue-400">{calculatedBmi}</span>
-          </div>
-        )}
-      </div>
-
       <div className="mb-4">
         <Label htmlFor="metric-date">Date</Label>
-        <Input 
-          type="date" 
-          id="metric-date"
-          value={selectedDate.toISOString().split('T')[0]} 
-          onChange={(e) => setSelectedDate(new Date(e.target.value))} 
-          className="w-full p-2 border rounded bg-gym-input text-white"
-        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !selectedDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => date && setSelectedDate(date)}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
@@ -269,12 +207,19 @@ const NewHealthMetricsPage: React.FC = () => {
 
       <div className="mb-4">
         <Label htmlFor="notes">General Notes</Label>
-        <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any additional health notes for the day..." />
+        <Textarea
+          placeholder="Enter general notes..."
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full p-2 border rounded bg-gray-700 text-white border-gray-600"
+        />
       </div>
 
-      <Button onClick={handleSave} className="w-full md:w-auto">Save Health Metrics</Button>
+      <Button onClick={handleSave} className="w-full mt-4 bg-green-500 hover:bg-green-600">
+        Save All Health Data
+      </Button>
     </div>
   );
 };
 
-export default NewHealthMetricsPage;
+export default SecondHealthMetricsPage;

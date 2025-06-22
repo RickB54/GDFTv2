@@ -5,27 +5,26 @@ import {
   getWorkouts,
   saveWorkouts,
   generateId,
-  ExerciseCategory,
   getSavedWorkoutTemplates,
-  saveSavedWorkoutTemplates
+  saveSavedWorkoutTemplates,
+  SavedWorkoutTemplate, // Import SavedWorkoutTemplate
+  WorkoutPlanOverride // Import WorkoutPlanOverride
 } from "@/lib/data";
+import { ExerciseCategory } from "@/lib/exerciseTypes"; // Corrected import path
 import { toast } from "sonner";
-
-export interface SavedWorkoutTemplate {
-  id: string;
-  name: string;
-  exercises: string[];
-  type: ExerciseCategory | "Custom";
-  createdAt: number;
-  workoutPlanOverrides?: WorkoutPlanOverride[];
-}
 
 export interface HealthMetric {
   id: string;
   workoutId?: string;
   date: string;
+  sleepDurationHours?: number;
+  sleepQualityRating?: number;
+  waterIntakeMl?: number;
+  stressLevelRating?: number;
+  stepsTaken?: number;
   heartRate?: number;
   caloriesBurned?: number;
+  calorieIntake?: number;
   bloodPressureSystolic?: number;
   bloodPressureDiastolic?: number;
   glucose?: number;
@@ -79,15 +78,7 @@ export interface CustomPlan {
   createdAt: number;
 }
 
-export interface WorkoutPlanOverride {
-  exerciseId: string;
-  sets?: string;
-  reps?: string;
-  weight?: string;
-  distance?: string;
-  time?: string;
-  incline?: string;
-}
+// REMOVE THE ENTIRE WorkoutPlanOverride interface from here
 
 interface WorkoutContextType {
   workouts: Workout[];

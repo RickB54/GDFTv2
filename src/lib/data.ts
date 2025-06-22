@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { ExerciseCategory } from './exerciseTypes'; // Import ExerciseCategory
 
 // Original types (we'll keep them for reference or if they are used elsewhere, 
 // but the Exercise interface will use the new relaxed types)
@@ -106,7 +107,7 @@ export interface Workout {
   startTime: number;
   endTime?: number;
   totalTime?: number;
-  type: RelaxedExerciseCategory | "Custom"; // Changed from ExerciseCategory
+  type: ExerciseCategory | "Custom"; // Use ExerciseCategory
   notes?: string; // Added notes property here
 }
 
@@ -114,8 +115,19 @@ export interface SavedWorkoutTemplate {
   id: string;
   name: string;
   exercises: string[];
-  type: RelaxedExerciseCategory | "Custom"; // Changed from ExerciseCategory
+  type: ExerciseCategory | "Custom"; // Use ExerciseCategory
   createdAt: number;
+  workoutPlanOverrides?: WorkoutPlanOverride[];
+}
+
+export interface WorkoutPlanOverride {
+  exerciseId: string;
+  sets?: string;
+  reps?: string;
+  weight?: string;
+  distance?: string;
+  time?: string;
+  incline?: string;
 }
 
 const sampleWorkouts: Workout[] = [];

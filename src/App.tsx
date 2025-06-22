@@ -20,10 +20,8 @@ import MyCalendar from "./pages/MyCalendar";
 import SettingsPage from "./pages/Settings";
 import CustomPlans from "./pages/CustomPlans";
 import BodyMetricsPage from "./pages/BodyMetricsPage";
+import SecondHealthMetricsPage from "./pages/2ndHealthMetrics";
 import NotFound from "./pages/NotFound";
-// Assuming Header and Footer components exist and are imported if used
-// import Header from '@/components/layout/Header'; 
-// import Footer from '@/components/layout/Footer';
 
 const queryClient = new QueryClient();
 
@@ -31,12 +29,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <SettingsProvider> { /* SettingsProvider should wrap BrowserRouter or its contents */ }
+        <SettingsProvider>
           <BrowserRouter>
             <ExerciseProvider>
               <WorkoutProvider>
                 <div className="bg-gym-darker min-h-screen text-white flex flex-col">
-                  {/* <Header /> You might have a Header component here */}
                   <main className="flex-grow container mx-auto px-4 py-2 md:py-4">
                     <Routes>
                       <Route path="/" element={<Index />} />
@@ -49,14 +46,14 @@ function App() {
                       <Route path="/my-calendar" element={<MyCalendar />} />
                       <Route path="/custom-plans" element={<CustomPlans />} />
                       <Route path="/body-metrics" element={<BodyMetricsPage />} />
-                      <Route path="/settings" element={<SettingsPage />} /> {/* Ensure this component exists */}
+                      <Route path="/2nd-health-metrics" element={<SecondHealthMetricsPage />} />
+                      <Route path="/settings" element={<SettingsPage />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </main>
-                  <NavBar /> { /* NavBar might be part of the main layout or at the bottom */}
-                  {/* <Footer /> You might have a Footer component here */}
+                  <NavBar />
                 </div>
-                <Toaster /> { /* Toasters can often be outside the main div but within providers */}
+                <Toaster />
                 <Sonner />
               </WorkoutProvider>
             </ExerciseProvider>
