@@ -4,9 +4,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, Check, Filter, Trash, Clock, Save, HelpCircle, ChevronDown } from "lucide-react"; // Added ChevronDown
 import { useExercise } from "@/contexts/ExerciseContext";
 import { useWorkout } from "@/contexts/WorkoutContext";
-import { Exercise } from "@/lib/data"; // Exercise is correctly from data.ts
+import { Exercise, SavedWorkoutTemplate } from "@/lib/data"; // Change this line
 import { ExerciseCategory, MuscleGroup } from "@/lib/exerciseTypes"; // Corrected import path
-import { SavedWorkoutTemplate } from "@/contexts/WorkoutContext";
+// import { SavedWorkoutTemplate } from "@/contexts/WorkoutContext"; // Remove this line if it exists
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";

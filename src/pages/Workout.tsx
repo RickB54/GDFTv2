@@ -3,9 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Clock, MoreVertical, Trash, Edit, RefreshCw, Save, Plus, Search, ChevronDown } from "lucide-react"; // Added ChevronDown
 import { useExercise } from "@/contexts/ExerciseContext";
 import { useWorkout } from "@/contexts/WorkoutContext";
-import { Exercise, WorkoutSet } from "@/lib/data";
+import { Exercise, WorkoutSet, SavedWorkoutTemplate } from "@/lib/data";
 import { ExerciseCategory } from "@/lib/exerciseTypes";
-import { SavedWorkoutTemplate } from "@/contexts/WorkoutContext";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -65,6 +64,7 @@ const Workout = () => {
   const [isRestTimerActive, setIsRestTimerActive] = useState(false);
   const [activeSetId, setActiveSetId] = useState<string | null>(null);
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
+  const [lastAddedSetExerciseId, setLastAddedSetExerciseId] = useState<string | null>(null);
   const [currentExercise, setCurrentExercise] = useState<Exercise | null>(null);
   const [showNotesForm, setShowNotesForm] = useState(false);
   const [notes, setNotes] = useState("");
@@ -104,20 +104,27 @@ const Workout = () => {
       if (exercise) {
         startWorkout("Single Exercise", [exerciseId]);
       }
-    } else if (currentWorkout && currentWorkout.exercises.length > 0) {
+    }
+  }, [location.search, getExerciseById, startWorkout, exerciseId]);
+
+  useEffect(() => {
+    if (currentWorkout && currentWorkout.exercises.length > 0) {
       const currentExerciseId = currentWorkout.exercises[currentExerciseIndex];
-      setActiveExerciseId(currentExerciseId);
       const exercise = getExerciseById(currentExerciseId);
-      setCurrentExercise(exercise || null);
-      setShowActiveWorkout(true);
       
-      // Auto-add first set for each exercise with settings if no sets exist
-      const exerciseSets = currentWorkout.sets.filter(set => set.exerciseId === currentExerciseId);
-      if (exerciseSets.length === 0 && exercise) {
-        addSet(currentExerciseId, null, exercise.settings);
+      if (exercise) {
+        setCurrentExercise(exercise);
+        setActiveExerciseId(currentExerciseId);
+        setShowActiveWorkout(true);
+
+        const exerciseSets = currentWorkout.sets.filter(set => set.exerciseId === currentExerciseId);
+        if (exerciseSets.length === 0 && lastAddedSetExerciseId !== currentExerciseId) {
+          addSet(currentExerciseId, null, exercise.settings);
+          setLastAddedSetExerciseId(currentExerciseId);
+        }
       }
     }
-  }, [location.search, currentWorkout, getExerciseById, startWorkout, currentExerciseIndex, exerciseId, addSet]);
+  }, [currentWorkout, currentExerciseIndex, getExerciseById, addSet, lastAddedSetExerciseId]);
   
   useEffect(() => {
     if (currentWorkout) {

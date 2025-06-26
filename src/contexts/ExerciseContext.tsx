@@ -176,9 +176,9 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     toast.success(`Successfully reinstalled ${defaultExercises.length} exercises`);
   };
 
-  const getExerciseById = (id: string) => {
+  const getExerciseById = useCallback((id: string) => {
     return exercises.find((ex) => ex.id === id);
-  };
+  }, [exercises]);
 
   const filterExercises = (equipment?: string, category?: string, muscleGroup?: string, searchQuery?: string) => {
     return exercises.filter((ex) => {

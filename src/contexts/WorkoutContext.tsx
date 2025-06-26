@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import {
   Workout,
   WorkoutSet,
@@ -180,7 +180,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem('customPlans', JSON.stringify(customPlans));
   }, [customPlans]);
 
-  const startWorkout = (type: string, exerciseIds: string[], planOverrides?: WorkoutPlanOverride[]) => {
+  const startWorkout = useCallback((type: string, exerciseIds: string[], planOverrides?: WorkoutPlanOverride[]) => {
     // Filter out any empty exercise IDs
     const validExerciseIds = exerciseIds.filter(id => id && id.trim() !== '');
     
@@ -208,7 +208,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
     setCurrentExerciseIndex(0);
     toast.success("Workout started");
     return workout;
-  };
+  }, [currentWorkout]);
 
   const startSavedWorkout = (templateId: string) => {
     const template = savedWorkoutTemplates.find(t => t.id === templateId);
@@ -260,7 +260,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const addSet = (exerciseId: string, previousSet: WorkoutSet | null = null, exerciseSettings: any = null): string | null | undefined => {
+  const addSet = useCallback((exerciseId: string, previousSet: WorkoutSet | null = null, exerciseSettings: any = null): string | null | undefined => {
     if (currentWorkout) {
       const newSet: WorkoutSet = {
         id: generateId(),
@@ -315,7 +315,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
       console.error("Cannot add set: No current workout");
       return null;
     }
-  };
+  }, [currentWorkout, workoutPlanOverrides]);
 
   const completeSet = (setId: string) => {
     if (currentWorkout) {
