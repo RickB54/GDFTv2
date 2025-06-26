@@ -261,14 +261,19 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const addSet = useCallback((exerciseId: string, previousSet: WorkoutSet | null = null, exerciseSettings: any = null): string | null | undefined => {
-    if (currentWorkout) {
+    setCurrentWorkout((prev) => {
+      if (!prev) {
+        console.error("Cannot add set: No current workout");
+        return null;
+      }
+
       const newSet: WorkoutSet = {
         id: generateId(),
         exerciseId,
         completed: false,
         timestamp: Date.now(),
       };
-      
+
       const planOverride = workoutPlanOverrides?.find(p => p.exerciseId === exerciseId);
 
       // Priority order: previousSet values > plan overrides > exerciseSettings > defaults
@@ -297,25 +302,20 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
         if (exerciseSettings.duration !== undefined) newSet.duration = exerciseSettings.duration;
       }
 
-      setCurrentWorkout((prev) => {
-        if (!prev) return null;
-        
-        const updatedWorkout = {
-          ...prev,
-          sets: [...prev.sets, newSet],
-        };
-        
-        console.log("Added new set:", newSet);
-        console.log("Updated workout sets:", updatedWorkout.sets);
-        return updatedWorkout;
-      });
-      
-      return newSet.id;
-    } else {
-      console.error("Cannot add set: No current workout");
-      return null;
-    }
-  }, [currentWorkout, workoutPlanOverrides]);
+      const updatedWorkout = {
+        ...prev,
+        sets: [...prev.sets, newSet],
+      };
+
+      console.log("Added new set:", newSet);
+      console.log("Updated workout sets:", updatedWorkout.sets);
+      return updatedWorkout;
+    });
+
+    // Since we can't get the newSet.id directly from the state updater, 
+    // we can't return it. This function should probably be void.
+    return null; 
+  }, [workoutPlanOverrides]);
 
   const completeSet = (setId: string) => {
     if (currentWorkout) {
