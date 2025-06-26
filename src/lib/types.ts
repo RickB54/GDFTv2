@@ -8,6 +8,15 @@ export interface Exercise {
   difficulty?: 'Beginner' | 'Intermediate' | 'Advanced';
   userCreated?: boolean;
   isFavorite?: boolean;
+  // Added fields for plan metrics
+  reps?: number;
+  sets?: number;
+  duration?: number;
+  incline?: number;
+  resistance?: number;
+  speed?: number;
+  watts?: number;
+  category?: string;
 }
 
 export interface Set {

@@ -132,6 +132,32 @@ const CustomPlans = () => {
     return Math.random().toString(36).substring(2, 9);
   };
 
+  const getInputFields = (category: string | undefined) => {
+    const fields = [
+      { key: 'sets', name: 'sets', label: 'Sets', placeholder: 'e.g., 3', tooltip: 'Number of sets' },
+      { key: 'reps', name: 'reps', label: 'Reps', placeholder: 'e.g., 10', tooltip: 'Number of reps' }
+    ];
+  
+    switch (category) {
+      case 'Weights':
+        fields.push({ key: 'weight', name: 'weight', label: 'Weight', placeholder: 'e.g., 50', tooltip: 'Weight in lbs/kg' });
+        break;
+      case 'Cardio':
+        fields.splice(0, fields.length); // Remove default fields
+        fields.push(
+          { key: 'time', name: 'time', label: 'Time', placeholder: 'e.g., 30', tooltip: 'Duration in minutes' },
+          { key: 'distance', name: 'distance', label: 'Distance', placeholder: 'e.g., 5', tooltip: 'Distance in miles/km' },
+          { key: 'incline', name: 'incline', label: 'Incline', placeholder: 'e.g., 2', tooltip: 'Incline level' }
+        );
+        break;
+      case 'Slide Board':
+        fields.push({ key: 'time', name: 'time', label: 'Time', placeholder: 'e.g., 60s', tooltip: 'Duration per set' });
+        break;
+    }
+
+    return fields;
+  };
+
   const handleAddDay = () => {
     const newDay: Day = {
       id: generateId(),
@@ -432,41 +458,6 @@ const CustomPlans = () => {
       toast.error(`Failed to start workout: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   };
-
-  const getInputFields = (category?: string) => {
-    switch (category) {
-        case 'Weights':
-            return [
-                { key: 'sets', placeholder: 'Sets', tooltip: 'Number of sets' },
-                { key: 'reps', placeholder: 'Reps', tooltip: 'Number of reps' },
-                { key: 'weight', placeholder: 'Weight (lbs)', tooltip: 'Weight in lbs' }
-            ];
-        case 'Cardio':
-            return [
-                { key: 'time', placeholder: 'Time', tooltip: 'Time in minutes' },
-                { key: 'distance', placeholder: 'Distance', tooltip: 'Distance in miles' },
-            ];
-        case 'Slide Board':
-             return [
-                { key: 'sets', placeholder: 'Sets', tooltip: 'Number of sets' },
-                { key: 'reps', placeholder: 'Reps', tooltip: 'Number of reps' },
-                { key: 'incline', placeholder: 'Incline', tooltip: 'Incline percentage' }
-            ];
-        case 'No Equipment':
-        case 'Bodyweight':
-            return [
-                { key: 'sets', placeholder: 'Sets', tooltip: 'Number of sets' },
-                { key: 'reps', placeholder: 'Reps', tooltip: 'Number of reps' },
-                { key: 'weight', placeholder: 'Weight (lbs)', tooltip: 'Can be bodyweight or extra weight' }
-            ];
-        default:
-            return [
-                { key: 'sets', placeholder: 'Sets', tooltip: 'Number of sets' },
-                { key: 'reps', placeholder: 'Reps', tooltip: 'Number of reps' },
-                { key: 'weight', placeholder: 'Weight', tooltip: 'Weight in lbs' }
-            ];
-    }
-  }
 
   return (
     <div className="page-container page-transition pb-24">

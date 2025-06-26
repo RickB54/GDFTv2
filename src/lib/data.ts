@@ -109,6 +109,7 @@ export interface Workout {
   totalTime?: number;
   type: ExerciseCategory | "Custom"; // Use ExerciseCategory
   notes?: string; // Added notes property here
+  workoutPlanOverrides?: WorkoutPlanOverride[];
 }
 
 export interface SavedWorkoutTemplate {

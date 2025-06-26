@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import {
   Workout,
   WorkoutSet,
@@ -12,6 +12,10 @@ import {
 } from "@/lib/data";
 import { ExerciseCategory } from "@/lib/exerciseTypes"; // Corrected import path
 import { toast } from "sonner";
+
+interface WorkoutProviderProps {
+  children: ReactNode;
+}
 
 export interface HealthMetric {
   id: string;
@@ -126,11 +130,20 @@ interface WorkoutContextType {
 
 const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
 
-export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
+export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) => {
   const [currentWorkout, setCurrentWorkout] = useState<Workout | null>(null);
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [isWorkoutActive, setIsWorkoutActive] = useState(false);
+  const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
+  const [showFinishWorkoutConfirmation, setShowFinishWorkoutConfirmation] = useState(false);
+  const [showStartWorkoutConfirmation, setShowStartWorkoutConfirmation] = useState(false);
+  const [pendingWorkout, setPendingWorkout] = useState<SavedWorkoutTemplate | null>(null);
+  const currentWorkoutRef = useRef(currentWorkout);
+
+  useEffect(() => {
+    currentWorkoutRef.current = currentWorkout;
+  }, [currentWorkout]);
+
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [savedWorkoutTemplates, setSavedWorkoutTemplates] = useState<SavedWorkoutTemplate[]>([]);
   const [workoutPlanOverrides, setWorkoutPlanOverrides] = useState<WorkoutPlanOverride[] | null>(null);
@@ -180,35 +193,35 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem('customPlans', JSON.stringify(customPlans));
   }, [customPlans]);
 
-  const startWorkout = useCallback((type: string, exerciseIds: string[], planOverrides?: WorkoutPlanOverride[]) => {
-    // Filter out any empty exercise IDs
+  const startWorkout = useCallback((type: string, exerciseIds: string[], planOverrides?: WorkoutPlanOverride[], workoutName?: string) => {
+    if (currentWorkoutRef.current) {
+      const confirmation = window.confirm("An active workout is in progress. Are you sure you want to start a new one? This will end the current workout.");
+      if (!confirmation) {
+        return;
+      }
+    }
+
     const validExerciseIds = exerciseIds.filter(id => id && id.trim() !== '');
-    
     if (validExerciseIds.length === 0) {
-      toast.error("No valid exercises selected");
-      return null;
+      toast.error("No valid exercises to start a workout.");
+      return;
     }
 
-    // If there's a current workout, just replace it silently without triggering completion
-    if (currentWorkout) {
-      setCurrentWorkout(null);
-    }
-
-    const workout: Workout = {
+    const newWorkout: Workout = {
       id: generateId(),
-      name: type === "Custom" ? "Custom Workout" : `${type} Workout`,
+      name: workoutName || (type === "Custom" ? "Custom Workout" : `${type} Workout`),
       exercises: validExerciseIds,
       sets: [],
       startTime: Date.now(),
       type: type as ExerciseCategory | "Custom",
+      workoutPlanOverrides: planOverrides,
     };
 
-    setCurrentWorkout(workout);
+    setCurrentWorkout(newWorkout);
     setWorkoutPlanOverrides(planOverrides || null);
     setCurrentExerciseIndex(0);
-    toast.success("Workout started");
-    return workout;
-  }, [currentWorkout]);
+    toast.success(`Started ${newWorkout.name}`);
+  }, []);
 
   const startSavedWorkout = (templateId: string) => {
     const template = savedWorkoutTemplates.find(t => t.id === templateId);
@@ -221,23 +234,18 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
       
-      const workout = startWorkout(template.type, validExercises, template.workoutPlanOverrides);
-      if (workout) {
-        // Update the workout name to match the template
-        setCurrentWorkout(prev => prev ? { ...prev, name: template.name } : null);
-        toast.success(`Started ${template.name}`);
-      }
+      startWorkout(template.type, validExercises, template.workoutPlanOverrides, template.name);
     } else {
       toast.error("Saved workout not found");
     }
   };
 
-  const endWorkout = () => {
-    if (currentWorkout) {
+  const endWorkout = useCallback(() => {
+    if (currentWorkoutRef.current) {
       const endedWorkout = {
-        ...currentWorkout, // Notes will be part of currentWorkout
+        ...currentWorkoutRef.current,
         endTime: Date.now(),
-        totalTime: Math.floor((Date.now() - currentWorkout.startTime) / 1000),
+        totalTime: Math.floor((Date.now() - (currentWorkoutRef.current.startTime || 0)) / 1000),
       };
 
       setWorkouts((prev) => {
@@ -250,17 +258,18 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
       setWorkoutPlanOverrides(null);
       toast.success("Workout completed");
     }
-  };
+  }, []);
 
-  const cancelWorkout = () => {
-    if (currentWorkout) {
+  const cancelWorkout = useCallback(() => {
+    if (currentWorkoutRef.current) {
       setCurrentWorkout(null);
       setWorkoutPlanOverrides(null);
       toast.info("Workout cancelled");
     }
-  };
+  }, []);
 
   const addSet = useCallback((exerciseId: string, previousSet: WorkoutSet | null = null, exerciseSettings: any = null): string | null | undefined => {
+    let newSetId: string | null = null;
     setCurrentWorkout((prev) => {
       if (!prev) {
         console.error("Cannot add set: No current workout");
@@ -273,6 +282,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
         completed: false,
         timestamp: Date.now(),
       };
+      newSetId = newSet.id;
 
       const planOverride = workoutPlanOverrides?.find(p => p.exerciseId === exerciseId);
 
@@ -312,13 +322,11 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
       return updatedWorkout;
     });
 
-    // Since we can't get the newSet.id directly from the state updater, 
-    // we can't return it. This function should probably be void.
-    return null; 
+    return newSetId;
   }, [workoutPlanOverrides]);
 
-  const completeSet = (setId: string) => {
-    if (currentWorkout) {
+  const completeSet = useCallback((setId: string) => {
+    if (currentWorkoutRef.current) {
       setCurrentWorkout((prev) => {
         if (!prev) return null;
         return {
@@ -330,10 +338,10 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       toast.success("Set completed!");
     }
-  };
+  }, []);
 
-  const skipSet = (setId: string) => {
-    if (currentWorkout) {
+  const skipSet = useCallback((setId: string) => {
+    if (currentWorkoutRef.current) {
       setCurrentWorkout((prev) => {
         if (!prev) return null;
         return {
@@ -343,10 +351,10 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       toast.info("Set skipped");
     }
-  };
+  }, []);
 
-  const updateSet = (setId: string, updates: Partial<WorkoutSet>) => {
-    if (currentWorkout) {
+  const updateSet = useCallback((setId: string, updates: Partial<WorkoutSet>) => {
+    if (currentWorkoutRef.current) {
       setCurrentWorkout((prev) => {
         if (!prev) return null;
         return {
@@ -357,9 +365,9 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
         };
       });
     }
-  };
+  }, []);
 
-  const updateWorkout = (updatedWorkout: any) => {
+  const updateWorkout = useCallback((updatedWorkout: any) => {
     setWorkouts(prev => {
       const updated = prev.map(workout => 
         workout.id === updatedWorkout.id ? updatedWorkout : workout
@@ -367,37 +375,37 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
       saveWorkouts(updated);
       return updated;
     });
-  };
+  }, []);
 
-  const navigateToExercise = (exerciseId: string) => {
-    if (currentWorkout) {
-      const index = currentWorkout.exercises.findIndex(id => id === exerciseId);
+  const navigateToExercise = useCallback((exerciseId: string) => {
+    if (currentWorkoutRef.current) {
+      const index = currentWorkoutRef.current.exercises.findIndex(id => id === exerciseId);
       if (index !== -1) {
         setCurrentExerciseIndex(index);
       }
     }
-  };
+  }, []);
 
-  const navigateToNextExercise = () => {
-    if (currentWorkout && currentExerciseIndex < currentWorkout.exercises.length - 1) {
+  const navigateToNextExercise = useCallback(() => {
+    if (currentWorkoutRef.current && currentExerciseIndex < currentWorkoutRef.current.exercises.length - 1) {
       setCurrentExerciseIndex(prevIndex => prevIndex + 1);
     }
-  };
+  }, [currentExerciseIndex]);
 
-  const navigateToPreviousExercise = () => {
-    if (currentWorkout && currentExerciseIndex > 0) {
+  const navigateToPreviousExercise = useCallback(() => {
+    if (currentWorkoutRef.current && currentExerciseIndex > 0) {
       setCurrentExerciseIndex(prevIndex => prevIndex - 1);
     }
-  };
+  }, [currentExerciseIndex]);
 
-  const saveCustomWorkout = (name: string) => {
-    if (!currentWorkout) {
+  const saveCustomWorkout = useCallback((name: string) => {
+    if (!currentWorkoutRef.current) {
       toast.error("No active workout to save. Please start a workout first.");
       return;
     }
 
     // Only save if there are valid exercises
-    if (currentWorkout.exercises.length === 0) {
+    if (currentWorkoutRef.current.exercises.length === 0) {
       toast.error("Cannot save workout with no exercises");
       return;
     }
@@ -405,8 +413,8 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
     const template: SavedWorkoutTemplate = {
       id: generateId(),
       name: name.trim(),
-      exercises: [...currentWorkout.exercises],
-      type: currentWorkout.type,
+      exercises: [...currentWorkoutRef.current.exercises],
+      type: currentWorkoutRef.current.type,
       createdAt: Date.now(),
       workoutPlanOverrides: workoutPlanOverrides || undefined
     };
@@ -423,9 +431,9 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
     setCurrentWorkout(null);
     
     toast.success(`Workout "${name}" saved successfully`);
-  };
+  }, [workoutPlanOverrides]);
 
-  const saveWorkoutTemplate = (name: string, exerciseIds: string[], type: ExerciseCategory | "Custom") => {
+  const saveWorkoutTemplate = useCallback((name: string, exerciseIds: string[], type: ExerciseCategory | "Custom") => {
     const newTemplate: SavedWorkoutTemplate = {
       id: generateId(),
       name,
@@ -439,27 +447,27 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
       return updated;
     });
     toast.success(`Template "${name}" saved!`);
-  };
+  }, []);
 
-  const deleteSavedWorkout = (templateId: string) => {
+  const deleteSavedWorkout = useCallback((templateId: string) => {
     setSavedWorkoutTemplates(prev => {
       const updated = prev.filter(t => t.id !== templateId);
       saveSavedWorkoutTemplates(updated);
       return updated;
     });
     toast.success("Workout template deleted");
-  };
+  }, []);
 
-  const deleteWorkout = (workoutId: string) => {
+  const deleteWorkout = useCallback((workoutId: string) => {
     setWorkouts(prev => {
       const updated = prev.filter(w => w.id !== workoutId);
       saveWorkouts(updated);
       return updated;
     });
     toast.success("Workout deleted");
-  };
+  }, []);
 
-  const getWorkoutStats = () => {
+  const getWorkoutStats = useCallback(() => {
     return workouts.reduce(
       (stats, workout) => {
         stats.totalWorkouts += 1;
@@ -472,9 +480,9 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
       },
       { totalWorkouts: 0, totalTime: 0, totalSets: 0, totalReps: 0 }
     );
-  };
+  }, [workouts]);
 
-  const addBodyMeasurement = (measurement: Omit<BodyMeasurement, "id">) => {
+  const addBodyMeasurement = useCallback((measurement: Omit<BodyMeasurement, "id">) => {
     const newMeasurement: BodyMeasurement = {
       ...measurement,
       id: generateId()
@@ -482,135 +490,136 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({
     
     setBodyMeasurements(prev => [newMeasurement, ...prev]);
     toast.success("Body measurement added");
-  };
+  }, []);
 
-  const updateBodyMeasurement = (id: string, updates: Partial<BodyMeasurement>) => {
+  const updateBodyMeasurement = useCallback((id: string, updates: Partial<BodyMeasurement>) => {
     setBodyMeasurements(prev => 
       prev.map(measurement => 
         measurement.id === id ? { ...measurement, ...updates } : measurement
       )
     );
     toast.success("Body measurement updated");
-  };
+  }, []);
 
-  const deleteBodyMeasurement = (id: string) => {
-    setBodyMeasurements(prev => prev.filter(measurement => measurement.id !== id));
+  const deleteBodyMeasurement = useCallback((id: string) => {
+    setBodyMeasurements(prev => prev.filter(m => m.id !== id));
     toast.success("Body measurement deleted");
-  };
+  }, []);
 
-  const getBodyMeasurements = () => {
+  const getBodyMeasurements = useCallback(() => {
     return bodyMeasurements;
-  };
+  }, [bodyMeasurements]);
 
-  const addHealthMetric = (metric: Omit<HealthMetric, "id">) => {
+  const addHealthMetric = useCallback((metric: Omit<HealthMetric, "id">) => {
     const newMetric: HealthMetric = {
       ...metric,
-      id: generateId()
+      id: generateId(),
     };
-    
     setHealthMetrics(prev => [newMetric, ...prev]);
     toast.success("Health metric added");
-  };
+  }, []);
 
-  const updateHealthMetric = (id: string, updates: Partial<HealthMetric>) => {
+  const updateHealthMetric = useCallback((id: string, updates: Partial<HealthMetric>) => {
     setHealthMetrics(prev => 
       prev.map(metric => 
         metric.id === id ? { ...metric, ...updates } : metric
       )
     );
     toast.success("Health metric updated");
-  };
+  }, []);
 
-  const deleteHealthMetric = (id: string) => {
-    setHealthMetrics(prev => prev.filter(metric => metric.id !== id));
+  const deleteHealthMetric = useCallback((id: string) => {
+    setHealthMetrics(prev => prev.filter(m => m.id !== id));
     toast.success("Health metric deleted");
-  };
+  }, []);
 
-  const getHealthMetrics = () => {
+  const getHealthMetrics = useCallback(() => {
     return healthMetrics;
-  };
+  }, [healthMetrics]);
 
-  const saveCustomPlan = (plan: Omit<CustomPlan, "id" | "createdAt">) => {
+  const saveCustomPlan = useCallback((plan: Omit<CustomPlan, "id" | "createdAt">) => {
     const newPlan: CustomPlan = {
       ...plan,
       id: generateId(),
-      createdAt: Date.now()
+      createdAt: Date.now(),
     };
-    
     setCustomPlans(prev => [newPlan, ...prev]);
     toast.success("Custom plan saved");
-    return newPlan.id;
-  };
+  }, []);
 
-  const updateCustomPlan = (planId: string, updates: Partial<CustomPlan>) => {
+  const updateCustomPlan = useCallback((planId: string, updates: Partial<CustomPlan>) => {
     setCustomPlans(prev => 
       prev.map(plan => 
         plan.id === planId ? { ...plan, ...updates } : plan
       )
     );
     toast.success("Custom plan updated");
-  };
+  }, []);
 
-  const deleteCustomPlan = (planId: string) => {
-    setCustomPlans(prev => prev.filter(plan => plan.id !== planId));
+  const deleteCustomPlan = useCallback((planId: string) => {
+    setCustomPlans(prev => prev.filter(p => p.id !== planId));
     toast.success("Custom plan deleted");
-  };
+  }, []);
 
-  const getCustomPlans = () => {
+  const getCustomPlans = useCallback(() => {
     return customPlans;
-  };
+  }, [customPlans]);
 
-  const deleteStatsData = () => {
+  const deleteStatsData = useCallback(() => {
     setWorkouts([]);
-    saveWorkouts([]);
-    setSavedWorkoutTemplates([]);
-    saveSavedWorkoutTemplates([]);
-    toast.success("Workout stats data deleted");
+    setBodyMeasurements([]);
+    setHealthMetrics([]);
+    setCustomPlans([]);
+    localStorage.removeItem('workouts');
+    localStorage.removeItem('bodyMeasurements');
+    localStorage.removeItem('healthMetrics');
+    localStorage.removeItem('customPlans');
+    toast.success('All stats data has been deleted.');
+  }, []);
+
+  const contextValue = {
+    workouts,
+    currentWorkout,
+    savedWorkoutTemplates,
+    customPlans,
+    bodyMeasurements,
+    healthMetrics,
+    startWorkout,
+    startSavedWorkout,
+    endWorkout,
+    cancelWorkout,
+    addSet,
+    completeSet,
+    skipSet,
+    updateSet,
+    updateWorkout,
+    updateCurrentWorkoutNotes,
+    getWorkoutStats,
+    navigateToExercise,
+    currentExerciseIndex,
+    navigateToNextExercise,
+    navigateToPreviousExercise,
+    saveCustomWorkout,
+    saveWorkoutTemplate,
+    deleteSavedWorkout,
+    deleteWorkout,
+    addBodyMeasurement,
+    updateBodyMeasurement,
+    deleteBodyMeasurement,
+    getBodyMeasurements,
+    addHealthMetric,
+    updateHealthMetric,
+    deleteHealthMetric,
+    getHealthMetrics,
+    saveCustomPlan,
+    updateCustomPlan,
+    deleteCustomPlan,
+    getCustomPlans,
+    deleteStatsData,
   };
 
   return (
-    <WorkoutContext.Provider
-      value={{
-        workouts,
-        currentWorkout,
-        savedWorkoutTemplates,
-        customPlans,
-        bodyMeasurements,
-        healthMetrics,
-        startWorkout,
-        startSavedWorkout,
-        endWorkout,
-        cancelWorkout,
-        addSet,
-        completeSet,
-        skipSet,
-        updateSet,
-        updateWorkout,
-        updateCurrentWorkoutNotes, // This was correctly added
-        getWorkoutStats, // This was already here
-        navigateToExercise,
-        currentExerciseIndex,
-        navigateToNextExercise,
-        navigateToPreviousExercise,
-        saveCustomWorkout,
-        saveWorkoutTemplate, // Add saveWorkoutTemplate here
-        deleteSavedWorkout,
-        deleteWorkout,
-        addBodyMeasurement,
-        updateBodyMeasurement,
-        deleteBodyMeasurement,
-        getBodyMeasurements,
-        addHealthMetric,
-        updateHealthMetric,
-        deleteHealthMetric,
-        getHealthMetrics,
-        saveCustomPlan,
-        updateCustomPlan,
-        deleteCustomPlan,
-        getCustomPlans,
-        deleteStatsData
-      }}
-    >
+    <WorkoutContext.Provider value={contextValue}>
       {children}
     </WorkoutContext.Provider>
   );
