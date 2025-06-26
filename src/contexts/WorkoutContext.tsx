@@ -78,8 +78,6 @@ export interface CustomPlan {
   createdAt: number;
 }
 
-// REMOVE THE ENTIRE WorkoutPlanOverride interface from here
-
 interface WorkoutContextType {
   workouts: Workout[];
   currentWorkout: Workout | null;

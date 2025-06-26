@@ -73,6 +73,9 @@ const Workout = () => {
   const [customWorkoutName, setCustomWorkoutName] = useState("");
   const [editingSet, setEditingSet] = useState<WorkoutSet | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [showDescription, setShowDescription] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
 
   // Add this useEffect to load notes from the current workout
   useEffect(() => {
@@ -292,54 +295,22 @@ const Workout = () => {
     startWorkout(type, exercises);
     if (exercises.length > 0) {
       setShowActiveWorkout(true);
-      
-      // Auto-add first set for the first exercise
-      setTimeout(() => {
-        const firstExerciseId = exercises[0];
-        const exercise = getExerciseById(firstExerciseId);
-        if (exercise) {
-          addSet(firstExerciseId, null, exercise.settings);
-        }
-      }, 100);
     }
   };
 
   const handleStartSavedWorkout = (templateId: string) => {
-    console.log("Starting saved workout with ID:", templateId);
     const template = savedWorkoutTemplates.find(t => t.id === templateId);
-    console.log("Found template:", template);
     
     if (template) {
-      console.log("Template exercises before filtering:", template.exercises);
-      
-      // Check if template has valid exercises before starting
       const validExercises = template.exercises.filter(id => id && id.trim() !== '');
-      console.log("Valid exercises after filtering:", validExercises);
       
       if (validExercises.length === 0) {
         toast.error("This saved workout has no valid exercises. Please recreate the workout.");
         return;
       }
       
-      // Start the workout
-      console.log("About to call startSavedWorkout");
       startSavedWorkout(templateId);
-      
-      // Force UI update and auto-add first set
-      setTimeout(() => {
-        console.log("Checking currentWorkout after timeout:", currentWorkout);
-        if (currentWorkout) {
-          console.log("Forcing showActiveWorkout to true");
-          setShowActiveWorkout(true);
-          
-          // Auto-add first set for the first exercise
-          const firstExerciseId = validExercises[0];
-          const exercise = getExerciseById(firstExerciseId);
-          if (exercise) {
-            addSet(firstExerciseId, null, exercise.settings);
-          }
-        }
-      }, 200);
+      setShowActiveWorkout(true);
       
     } else {
       toast.error("Saved workout not found");
@@ -840,7 +811,7 @@ const Workout = () => {
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
-            <h1 className="text-xl font-bold">{currentExercise.name}</h1>
+            <h1 className="text-xl font-bold truncate pr-2">{currentExercise.name}</h1>
           </div>
           <div className="flex items-center space-x-2">
             <button 
@@ -858,141 +829,151 @@ const Workout = () => {
             </div>
           </div>
         </div>
-        
-        {currentWorkout.exercises.length > 1 && (
-          <div className="flex justify-between items-center mb-4">
-            <button
-              className={`p-2 rounded-full ${currentExerciseIndex > 0 ? "bg-gym-blue" : "bg-gym-dark/50"}`}
-              onClick={handlePreviousExercise}
-              disabled={currentExerciseIndex === 0}
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <span className="text-sm">
-              {currentExerciseIndex + 1} / {currentWorkout.exercises.length}
-            </span>
-            <button
-              className={`p-2 rounded-full ${currentExerciseIndex < currentWorkout.exercises.length - 1 ? "bg-gym-blue" : "bg-gym-dark/50"}`}
-              onClick={handleNextExercise}
-              disabled={currentExerciseIndex === currentWorkout.exercises.length - 1}
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-        )}
-        
-        <div className="flex justify-between items-center bg-gym-dark px-4 py-2 rounded-lg mb-6">
-          <div className="flex items-center">
-            <span className="text-sm mr-2">Rest:</span>
-            <span className={`text-sm font-mono ${isRestTimerActive ? "text-gym-green" : ""}`}>
-              {formatTime(restTime)}
-            </span>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              className="p-1 hover:bg-gym-card rounded transition-colors"
-              onClick={() => {
-                setIsRestTimerActive(!isRestTimerActive);
-              }}
-            >
-              {isRestTimerActive ? (
-                <span className="text-xs bg-gym-red px-2 py-1 rounded">Pause</span>
-              ) : (
-                <span className="text-xs bg-gym-green px-2 py-1 rounded">Start</span>
-              )}
-            </button>
-            <button
-              className="p-1 hover:bg-gym-card rounded transition-colors"
-              onClick={() => setRestTime(60)}
-            >
-              <RefreshCw className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        
-        <div className="flex mb-6">
-          <div className="h-54 w-54 rounded-lg bg-gym-dark flex items-center justify-center mr-4 overflow-hidden" style={{ height: "13.5rem", width: "13.5rem" }}>
+
+        <div className="mb-6">
+          <div className="relative w-full aspect-video rounded-lg bg-gym-dark flex items-center justify-center overflow-hidden mb-4">
             {currentExercise.thumbnailUrl || currentExercise.pictureUrl ? (
               <img
                 src={currentExercise.thumbnailUrl || currentExercise.pictureUrl}
                 alt={currentExercise.name}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
                 onError={(e) => {
                   e.currentTarget.onerror = null;
                   e.currentTarget.src = "/placeholder.svg";
                 }}
               />
             ) : (
-              <span className="text-xs text-muted-foreground">No image</span>
+              <div className="flex items-center justify-center w-full h-full bg-gray-800">
+                <span className="text-xs text-muted-foreground">No image available</span>
+              </div>
             )}
           </div>
-          <div>
-            <h2 className="text-lg font-medium">{currentExercise.name}</h2>
-            <div className="flex mt-1 space-x-2">
+
+          {currentWorkout.exercises.length > 1 && (
+            <div className="flex justify-between items-center mb-4">
               <button
-                className={`text-xs px-3 py-1 rounded border transition-colors ${
-                  !showNotesForm
-                    ? "bg-primary/20 border-primary/50 text-primary"
-                    : "bg-gym-dark border-gray-700 text-muted-foreground"
-                }`}
-                onClick={() => setShowNotesForm(false)}
+                className={`p-2 rounded-full ${currentExerciseIndex > 0 ? "bg-gym-blue" : "bg-gym-dark/50"}`}
+                onClick={handlePreviousExercise}
+                disabled={currentExerciseIndex === 0}
               >
-                HISTORY
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <span className="text-sm">
+                {currentExerciseIndex + 1} / {currentWorkout.exercises.length}
+              </span>
+              <button
+                className={`p-2 rounded-full ${currentExerciseIndex < currentWorkout.exercises.length - 1 ? "bg-gym-blue" : "bg-gym-dark/50"}`}
+                onClick={handleNextExercise}
+                disabled={currentExerciseIndex === currentWorkout.exercises.length - 1}
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center bg-gym-dark px-4 py-2 rounded-lg mb-6">
+            <div className="flex items-center">
+              <span className="text-sm mr-2">Rest:</span>
+              <span className={`text-sm font-mono ${isRestTimerActive ? "text-gym-green" : ""}`}>
+                {formatTime(restTime)}
+              </span>
+            </div>
+            <div className="flex space-x-2">
+              <button
+                className="p-1 hover:bg-gym-card rounded transition-colors"
+                onClick={() => {
+                  setIsRestTimerActive(!isRestTimerActive);
+                }}
+              >
+                {isRestTimerActive ? (
+                  <span className="text-xs bg-gym-red px-2 py-1 rounded">Pause</span>
+                ) : (
+                  <span className="text-xs bg-gym-green px-2 py-1 rounded">Start</span>
+                )}
               </button>
               <button
-                className={`text-xs px-3 py-1 rounded border transition-colors ${
-                  showNotesForm
-                    ? "bg-primary/20 border-primary/50 text-primary"
-                    : "bg-gym-dark border-gray-700 text-muted-foreground"
-                }`}
-                onClick={() => setShowNotesForm(true)}
+                className="p-1 hover:bg-gym-card rounded transition-colors"
+                onClick={() => setRestTime(60)}
               >
-                NOTES
+                <RefreshCw className="h-4 w-4" />
               </button>
             </div>
           </div>
-        </div>
-        
-        {showNotesForm && (
-          <div className="mb-6">
-            <textarea
-              className="w-full h-24 bg-gym-dark border border-gray-700 rounded-lg p-3 text-sm"
-              placeholder="Add notes about this exercise..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-            <button
-              className="mt-2 w-full bg-gym-blue text-white py-2 rounded-lg font-medium hover:bg-blue-600 transition-colors"
-              onClick={handleSaveNotes}
+
+          <div className="flex justify-center space-x-2 mb-4">
+            <Button
+              variant={showDescription ? "default" : "outline"}
+              onClick={() => {
+                setShowDescription(!showDescription);
+                setShowHistory(false);
+                setShowNotes(false);
+              }}
             >
-              Save Notes
-            </button>
+              Description
+            </Button>
+            <Button
+              variant={showHistory ? "default" : "outline"}
+              onClick={() => {
+                setShowHistory(!showHistory);
+                setShowDescription(false);
+                setShowNotes(false);
+              }}
+            >
+              History
+            </Button>
+            <Button
+              variant={showNotes ? "default" : "outline"}
+              onClick={() => {
+                setShowNotes(!showNotes);
+                setShowDescription(false);
+                setShowHistory(false);
+              }}
+            >
+              Notes
+            </Button>
           </div>
-        )}
-        
-        {!showNotesForm && currentExercise && (
-          <div className="mb-6">
-            <h3 className="text-sm font-medium mb-1">Exercise Description:</h3>
-            <p className="text-sm text-gray-300">
-              {currentExercise.description || currentExercise.notes || "No description available."}
-            </p>
-          </div>
-        )}
-        
-        {!showNotesForm && (
-          <div className="mb-6">
-            <h3 className="text-sm font-medium mb-3 text-muted-foreground">Previous Workouts</h3>
-            {getExerciseHistory().length > 0 ? (
-              <div className="bg-gym-card/50 rounded-lg p-4 border border-gray-700">
-                {getExerciseHistory().map(history => renderHistoryItem(history))}
-              </div>
-            ) : (
-              <div className="bg-gym-card/50 rounded-lg p-4 border border-gray-700 text-center text-muted-foreground">
-                <p>No previous history for this exercise</p>
-              </div>
-            )}
-          </div>
-        )}
+
+          {showDescription && (
+            <div className="mb-6 p-4 bg-gym-card rounded-lg">
+              <h3 className="text-sm font-medium mb-1">Exercise Description:</h3>
+              <p className="text-sm text-gray-300">
+                {currentExercise.description || currentExercise.notes || "No description available."}
+              </p>
+            </div>
+          )}
+
+          {showHistory && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium mb-3 text-muted-foreground">Previous Workouts</h3>
+              {getExerciseHistory().length > 0 ? (
+                <div className="bg-gym-card/50 rounded-lg p-4 border border-gray-700">
+                  {getExerciseHistory().map(history => renderHistoryItem(history))}
+                </div>
+              ) : (
+                <div className="bg-gym-card/50 rounded-lg p-4 border border-gray-700 text-center text-muted-foreground">
+                  <p>No previous history for this exercise</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {showNotes && (
+            <div className="mb-6">
+              <textarea
+                className="w-full h-24 bg-gym-dark border border-gray-700 rounded-lg p-3 text-sm"
+                placeholder="Add notes about this exercise..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+              <button
+                className="mt-2 w-full bg-gym-blue text-white py-2 rounded-lg font-medium hover:bg-blue-600 transition-colors"
+                onClick={handleSaveNotes}
+              >
+                Save Notes
+              </button>
+            </div>
+          )}
+        </div>
         
         <div className="space-y-4 mb-6">
           {getCurrentExerciseSets().map((set, index) => renderSet(set, index))}
