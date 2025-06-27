@@ -416,7 +416,7 @@ const Settings = () => {
             <Info className="h-8 w-8 text-primary" />
             <div>
               <p className="font-bold text-lg">GymDayFitTracker</p>
-              <p className="text-sm">Version 2.1</p>
+              <p className="text-sm">Version 2.2</p>
             </div>
           </div>
           <p className="mt-4 text-gray-400">
